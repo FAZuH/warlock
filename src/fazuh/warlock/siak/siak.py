@@ -117,17 +117,40 @@ class Siak:
 
             captcha_solution = await get_captcha_solution(image_data)
 
-            if not captcha_solution:
-                if self.config.auth_discord_webhook_url:
-                    await self._notify_admin_for_captcha(image_data)
+            if captcha_solution:
+                await self.page.fill("input[name=answer]", captcha_solution)
+                await self.page.click("button#jar")
+                await self.page.wait_for_load_state()
+                return True
 
-                captcha_solution = await asyncio.to_thread(
-                    input, "Please enter the CAPTCHA code from the image: "
+            # If no discord solution, and headless, we can't continue
+            if self.config.headless:
+                logger.error("CAPTCHA detected in HEADLESS mode. Discord Bot not configured.")
+                raise Exception(
+                    "Headless mode requires Discord Bot for CAPTCHA. Set HEADLESS=false to solve manually."
                 )
 
-            await self.page.fill("input[name=answer]", captcha_solution)
-            await self.page.click("button#jar")
-            await self.page.wait_for_load_state()
+            # Manual handling
+            if self.config.auth_discord_webhook_url:
+                await self._notify_admin_for_captcha(image_data)
+
+            logger.warning(
+                "CAPTCHA detected. Please solve it manually in the opened browser window."
+            )
+
+            # Poll until captcha is gone
+            while True:
+                try:
+                    # Check if answer input is still visible
+                    if not await self.page.is_visible("input[name=answer]"):
+                        # Double check content logic to be safe
+                        if not self.is_captcha_page(await self.content):
+                            logger.success("CAPTCHA passed.")
+                            break
+                except Exception:
+                    # Page possibly navigated away or closed
+                    break
+                await asyncio.sleep(1)
 
         except Exception as e:
             logger.error(f"Failed to handle CAPTCHA: {e}")

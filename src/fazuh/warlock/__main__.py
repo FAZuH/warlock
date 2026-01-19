@@ -15,6 +15,10 @@ async def main():
 
     logger.add("log/{time}.log", rotation="1 day")
 
+    from fazuh.warlock.bot import init_discord_bot
+
+    await init_discord_bot()
+
     if args.module == "track":
         from fazuh.warlock.module.schedule_update_tracker import ScheduleUpdateTracker
 

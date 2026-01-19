@@ -76,43 +76,47 @@ class CaptchaBot(discord.Client):
 # Global Singleton state
 _bot: CaptchaBot | None = None
 _bot_task: asyncio.Task | None = None
+_initialization_attempted: bool = False
 
 
-async def _get_or_create_bot() -> CaptchaBot | None:
-    global _bot, _bot_task
+async def init_discord_bot():
+    """Initializes the Discord bot if config is valid."""
+    global _bot, _bot_task, _initialization_attempted
+
+    if _initialization_attempted:
+        return
+
+    _initialization_attempted = True
     config = Config()
 
-    if not config.discord_token or not config.discord_channel_id:
-        return None
+    token = config.discord_token
+    # config.discord_channel_id is already int or None
+    channel_id = config.discord_channel_id
 
-    # cast to int to be sure
-    try:
-        channel_id = int(config.discord_channel_id)
-    except (ValueError, TypeError):
-        logger.error("Invalid DISCORD_CHANNEL_ID")
-        return None
-
-    if _bot is None:
-        _bot = CaptchaBot(channel_id)
-        # Start the bot in background
-        _bot_task = asyncio.create_task(_bot.start(config.discord_token))
-
-        # Check for immediate failure (like invalid token)
-        # Give it a small moment to potentially fail or start logging in
-        await asyncio.sleep(0.1)
-        if _bot_task.done() and _bot_task.exception():
-            logger.error(f"Discord bot failed to start: {_bot_task.exception()}")
+    # Check config validity
+    if token and channel_id:
+        try:
+            _bot = CaptchaBot(int(channel_id))
+            _bot_task = asyncio.create_task(_bot.start(token))
+            logger.info("Discord bot initialized in background.")
+        except Exception as e:
+            logger.error(f"Failed to initialize Discord bot: {e}")
             _bot = None
-            _bot_task = None
-            return None
-
-    return _bot
+    elif token or channel_id:
+        logger.warning(
+            "Discord Bot configuration incomplete. Both DISCORD_TOKEN and DISCORD_CHANNEL_ID are required. Bot disabled."
+        )
+    else:
+        # Neither set, silent pass
+        pass
 
 
 async def get_captcha_solution(image_data: bytes) -> str | None:
-    bot = await _get_or_create_bot()
-    if not bot:
-        logger.warning("Discord bot not available.")
+    # Ensure init was attempted
+    if not _initialization_attempted:
+        await init_discord_bot()
+
+    if not _bot:
         return None
 
-    return await bot.solve(image_data)
+    return await _bot.solve(image_data)

@@ -59,9 +59,11 @@ You can configure a Discord bot to handle CAPTCHA challenges remotely.
 1. Create a Discord Bot and get the token.
 2. Invite the bot to your server.
 3. Get the Channel ID where you want the bot to post.
-4. Set `DISCORD_TOKEN` and `DISCORD_CHANNEL_ID` in your `.env`.
+4. Set **BOTH** `DISCORD_TOKEN` and `DISCORD_CHANNEL_ID` in your `.env`.
 
 When a CAPTCHA appears, the bot will post the image to the channel. **Reply** to the bot's message with the solution code to solve it.
+
+**NOTE**: If you do not configure the Discord Bot, you must set `HEADLESS=false` in your `.env`. The browser window will open, and you will need to solve the CAPTCHA manually in the browser when prompted.
 
 ## License
 
