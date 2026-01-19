@@ -12,7 +12,7 @@ from fazuh.warlock.config import Config
 from fazuh.warlock.siak.siak import Siak
 
 
-class ScheculeUpdateTracker:
+class ScheduleUpdateTracker:
     def __init__(self):
         self.conf = Config()
 
@@ -34,7 +34,7 @@ class ScheculeUpdateTracker:
             self.conf.load()  # Reload config to allow dynamic changes to .env
             try:
                 # Try to use existing session
-                if not await self.siak.is_logged_in():
+                if not self.siak.is_logged_in(await self.siak.content):
                     # Otherwise re-authenticate
                     await self.siak.close()
                     self.siak = Siak(self.conf.username, self.conf.password)
@@ -59,6 +59,12 @@ class ScheculeUpdateTracker:
         await self.siak.page.goto(self.conf.tracked_url)
         if self.siak.page.url != self.conf.tracked_url:
             logger.error(f"Expected {self.conf.tracked_url}. Found {self.siak.page.url} instead.")
+            return
+        if not self.siak.is_captcha_page(await self.siak.content):
+            logger.error("Captcha page detected. Please solve the captcha manually.")
+            return
+        if not self.siak.is_logged_in(await self.siak.content):
+            logger.error("Not logged in. Please check your credentials.")
             return
 
         # 2. Parse response

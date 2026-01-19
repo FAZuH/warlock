@@ -16,9 +16,9 @@ async def main():
     logger.add("log/{time}.log", rotation="1 day")
 
     if args.module == "track":
-        from fazuh.warlock.module.schedule_update_tracker import ScheculeUpdateTracker
+        from fazuh.warlock.module.schedule_update_tracker import ScheduleUpdateTracker
 
-        await ScheculeUpdateTracker().start()
+        await ScheduleUpdateTracker().start()
 
     elif args.module == "war":
         from fazuh.warlock.module.war_bot import WarBot

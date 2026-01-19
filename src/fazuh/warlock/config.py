@@ -48,7 +48,11 @@ class Config:
 
         # War bot
         self.warbot_interval = int(os.getenv("WARBOT_INTERVAL", 5))
-        self.warbot_autosubmit = os.getenv("WARBOT_AUTOSUBMIT", "true").lower() in ("true", "1", "yes")
+        self.warbot_autosubmit = os.getenv("WARBOT_AUTOSUBMIT", "true").lower() in (
+            "true",
+            "1",
+            "yes",
+        )
 
     def __new__(cls, *args, **kwargs):
         if cls._instance is None:

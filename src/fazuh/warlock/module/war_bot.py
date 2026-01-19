@@ -1,7 +1,7 @@
 import asyncio
-import time
 import json
 import os
+import time
 
 from loguru import logger
 
@@ -22,7 +22,8 @@ class WarBot:
             self.courses = json.load(f)
 
     async def start(self):
-        # Don't reuse sessions. self.is_not_registration_period() will always return True until we re-authenticate.
+        # NOTE: Don't reuse sessions. self.is_not_registration_period() will always return True until we re-authenticate.
+        # This means that the /main/CoursePlan/CoursePlanEdit page WILL NOT update until we logout, then login again
         while True:
             self.siak = Siak(self.conf.username, self.conf.password)
             await self.siak.start()
@@ -87,7 +88,7 @@ class WarBot:
 
         logger.success("WarBot completed successfully.")
         logger.info("Script finished. Press Ctrl+C to exit (including the browser).")
-        time.sleep(float('inf'))
+        time.sleep(float("inf"))
 
     async def is_not_registration_period(self) -> bool:
         """Check if the current period is not a registration period."""
