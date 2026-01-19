@@ -1,0 +1,25 @@
+# Warlock Courses Configuration Example
+# You can use course, prof, time, and code to select courses.
+
+# 1. Select by Course only (picks the first available class for this course)
+- course: Database
+
+# 2. Select by Course and Professor
+- course: Analisis Mult
+  prof: Titin
+
+# 3. Select by Course and Time
+- course: Agama Buddha
+  time: Jumat
+
+# 4. Select by Course, Professor, AND Time (strict filtering)
+- course: Analisis 1
+  prof: Putri
+  time: Senin, 08.00-09.40
+
+# 5. Select by unique Class Code (skips course/prof/time matching)
+- code: "782396"
+
+# 6. You can add names for your own reference
+- name: "My Favorite Elective"
+  code: "785627"

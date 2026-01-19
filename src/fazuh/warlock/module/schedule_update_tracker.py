@@ -1,6 +1,5 @@
 import asyncio
 from datetime import datetime
-import difflib
 import io
 from pathlib import Path
 
@@ -123,7 +122,7 @@ class ScheduleUpdateTracker:
         new_courses = self._parse_courses_dict(curr)
 
         changes = self._generate_detailed_diff(old_courses, new_courses)
-        
+
         if not changes:
             logger.info("No meaningful changes detected (only order changed).")
             return
@@ -143,16 +142,13 @@ class ScheduleUpdateTracker:
                 # Extract course code (first part before the dash)
                 course_code = course_info.split("-")[0].strip()
                 classes = [c.strip() for c in classes_str.split(" | ") if c.strip()]
-                result[course_code] = {
-                    "info": course_info,
-                    "classes": classes
-                }
+                result[course_code] = {"info": course_info, "classes": classes}
         return result
 
     def _generate_detailed_diff(self, old: dict, new: dict) -> list[str]:
         """Generate human-readable diff showing what changed."""
         changes = []
-        
+
         # New courses
         for code in sorted(new.keys() - old.keys()):
             course_info = new[code]["info"]
@@ -166,29 +162,29 @@ class ScheduleUpdateTracker:
                     ruang = parts[4].strip()
                     changes.append(f"  - {kelas}: `{waktu}` di `{ruang}`")
             changes.append("")
-        
+
         # Removed courses
         for code in sorted(old.keys() - new.keys()):
             course_info = old[code]["info"]
             course_name = course_info.split(";")[0].strip()
             changes.append(f"- **🗑️ {course_name}**")
             changes.append("")
-        
+
         # Modified courses
         for code in sorted(old.keys() & new.keys()):
             old_classes = set(old[code]["classes"])
             new_classes = set(new[code]["classes"])
-            
+
             added = new_classes - old_classes
             removed = old_classes - new_classes
-            
+
             if not added and not removed:
                 continue
-            
+
             course_info = new[code]["info"]
             course_name = course_info.split(";")[0].strip()
             changes.append(f"- **✏️ {course_name}**")
-            
+
             for class_detail in removed:
                 parts = class_detail.split(";")
                 if len(parts) >= 5:
@@ -196,7 +192,7 @@ class ScheduleUpdateTracker:
                     waktu = parts[3].strip()
                     ruang = parts[4].strip()
                     changes.append(f"  - ❌ ~~{kelas}: `{waktu}` di `{ruang}`~~")
-            
+
             for class_detail in added:
                 parts = class_detail.split(";")
                 if len(parts) >= 5:
@@ -204,9 +200,9 @@ class ScheduleUpdateTracker:
                     waktu = parts[3].strip()
                     ruang = parts[4].strip()
                     changes.append(f"  - ✅ {kelas}: `{waktu}` di `{ruang}`")
-            
+
             changes.append("")
-        
+
         return changes
 
     async def _send_changes_to_webhook(self, webhook_url: str, changes: list[str]):
@@ -214,17 +210,17 @@ class ScheduleUpdateTracker:
         # Extract period from tracked_url
         period_code = self._extract_period_from_url(self.conf.tracked_url)
         period_display = self._format_period(period_code)
-        
+
         message_header = f"## Jadwal SIAK UI Berubah ({period_display})\n"
         base_data = {
             "username": "Warlock Tracker",
             "avatar_url": "https://academic.ui.ac.id/favicon.ico",
         }
-        
+
         MAX_LENGTH = 1900
-        
+
         full_message = message_header + "\n".join(changes)
-        
+
         if len(full_message) < MAX_LENGTH:
             data = base_data.copy()
             data["content"] = full_message
@@ -236,16 +232,16 @@ class ScheduleUpdateTracker:
             except requests.exceptions.RequestException as e:
                 logger.error(f"Error sending to webhook: {e}")
                 return
-        
+
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         filename = f"siak_schedule_diff_{timestamp}.txt"
         diff_content = "\n".join(changes)
         diff_file = io.BytesIO(diff_content.encode("utf-8"))
-        
+
         data = base_data.copy()
         data["content"] = f"{message_header}\n*(Perubahan terlalu panjang, lihat file)*"
         files = {"file": (filename, diff_file, "text/plain")}
-        
+
         try:
             resp = await asyncio.to_thread(requests.post, webhook_url, data=data, files=files)
             resp.raise_for_status()
@@ -265,9 +261,9 @@ class ScheduleUpdateTracker:
         """Convert period code to readable format. '2025-2' -> 'Semester Genap 2025/2026'"""
         if "-" not in period_code:
             return period_code
-        
+
         year, semester = period_code.split("-")
         semester_name = "Ganjil" if semester == "1" else "Genap"
         next_year = str(int(year) + 1)
-        
+
         return f"Semester {semester_name} {year}/{next_year}"

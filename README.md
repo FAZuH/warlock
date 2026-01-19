@@ -32,11 +32,36 @@ In root of the repository,
 
 ### War bot
 
-Copy `courses-example.json` file to `courses.json` and fill in the required fields.
+Create a `courses.yaml` (recommended) or `courses.json` file to configure your target courses.
+
+**Recommended Format (`courses.yaml`):**
+```yaml
+# Select by Course only (chooses the first match)
+- course: Database
+
+# Select by Course and Professor
+- course: Analisis Mult
+  prof: Titin
+
+# Select by Class Code (unique ID in radio button value)
+- code: "782396"
+
+# Select by Course and Time
+- course: Agama Buddha
+  time: Jumat
+
+# You can add names for your own reference
+- name: "My Favorite Elective"
+  code: "785627"
+```
 
 You can run using `uv run warlock war`.
 
-The War bot does **case-insensitive** searches and does **not require exact matches** for course and professor names. For example, you can use "cs 101": "john" to select course "CS 101: Introduction to Computer Scienc" with professor name "John Doe".
+The War bot supports flexible matching criteria (case-insensitive partial matches):
+- **Course & Professor**: Matches course name and professor name.
+- **Class Code**: Matches the unique class code (radio button value).
+- **Time**: Matches course name and schedule time.
+- **Legacy JSON**: `{"Course Name": "Prof Name"}` format is still supported for backward compatibility.
 
 ### Schedule update tracker
 

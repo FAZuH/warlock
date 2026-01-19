@@ -1,10 +1,9 @@
 import asyncio
-import json
-import os
 
 from loguru import logger
 
 from fazuh.warlock.config import Config
+from fazuh.warlock.model import load_courses
 from fazuh.warlock.service.irs_service import IrsService
 from fazuh.warlock.siak.path import Path
 from fazuh.warlock.siak.siak import Siak
@@ -14,13 +13,7 @@ class AutoFill:
     def __init__(self):
         self.conf = Config()
         self.irs_service = IrsService()
-
-        if not os.path.exists("courses.json"):
-            logger.error("courses.json file not found. Please create it with the required courses.")
-            raise FileNotFoundError("courses.json file not found.")
-
-        with open("courses.json", "r") as f:
-            self.courses = json.load(f)
+        self.courses = load_courses()
 
     async def start(self):
         # We need credentials for Siak constructor, even if we don't use them for auto-login
