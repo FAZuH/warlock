@@ -7,6 +7,7 @@ from playwright.async_api import Browser
 from playwright.async_api import Page
 import requests
 
+from fazuh.warlock.bot import get_captcha_solution
 from fazuh.warlock.config import Config
 from fazuh.warlock.siak.path import Path
 
@@ -114,12 +115,15 @@ class Siak:
             base64_data = image_src.split(",", 1)[1]
             image_data = base64.b64decode(base64_data)
 
-            if self.config.auth_discord_webhook_url:
-                await self._notify_admin_for_captcha(image_data)
+            captcha_solution = await get_captcha_solution(image_data)
 
-            captcha_solution = await asyncio.to_thread(
-                input, "Please enter the CAPTCHA code from the image: "
-            )
+            if not captcha_solution:
+                if self.config.auth_discord_webhook_url:
+                    await self._notify_admin_for_captcha(image_data)
+
+                captcha_solution = await asyncio.to_thread(
+                    input, "Please enter the CAPTCHA code from the image: "
+                )
 
             await self.page.fill("input[name=answer]", captcha_solution)
             await self.page.click("button#jar")

@@ -13,6 +13,7 @@ dependencies = [
     "python-dotenv",
     "loguru>=0.7.3",
     "requests>=2.32.4",
+    "discord-py>=2.4.0",
 ]
 
 [project.scripts]

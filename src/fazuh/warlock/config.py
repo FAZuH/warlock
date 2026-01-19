@@ -34,6 +34,10 @@ class Config:
 
         self.user_id = os.getenv("USER_ID")
         self.auth_discord_webhook_url = os.getenv("AUTH_DISCORD_WEBHOOK_URL")
+        self.discord_token = os.getenv("DISCORD_TOKEN")
+        self.discord_channel_id = os.getenv("DISCORD_CHANNEL_ID")
+        if self.discord_channel_id:
+            self.discord_channel_id = int(self.discord_channel_id)
         self.headless = os.getenv("HEADLESS", "true").lower() in ("true", "1", "yes")
         self.browser = os.getenv("BROWSER", "chromium").lower()
 
