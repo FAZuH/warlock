@@ -9,12 +9,13 @@ https://github.com/user-attachments/assets/e1f077d2-494c-43de-b5be-4a1bfbb87a3d
 ## Features
 
 - Automatic authentication to university portal
-- Handle CAPTCHA challenges by notifying and asking the user to solve them
+- Handle CAPTCHA challenges via CLI or interactive Discord bot
 - Send notifications via Discord webhook
 
 **Modules**:
 - **war**: Bot to search and enroll for courses by course and professor names.
 - **track**: Track changes in course offerings, including professor, schedule, location, and more.
+- **autofill**: Automates IRS filling after manual authentication.
 
 ## Installation
 
@@ -40,6 +41,27 @@ The War bot does **case-insensitive** searches and does **not require exact matc
 ### Schedule update tracker
 
 In root of the repository, run `uv run warlock track`.
+
+### AutoFill
+
+This module helps you fill the IRS form quickly after you log in manually. It is useful when you want to handle the login process yourself but want the bot to select courses for you.
+
+1. Configure `courses.json` as described in the War bot section.
+2. Run `uv run warlock autofill`.
+3. A browser window will open. Log in and select your role manually.
+4. Once you are in, the bot will automatically navigate to the IRS page, fill in the courses, and scroll to the bottom.
+5. You can then review and submit manually.
+
+### Discord Bot for CAPTCHA
+
+You can configure a Discord bot to handle CAPTCHA challenges remotely.
+
+1. Create a Discord Bot and get the token.
+2. Invite the bot to your server.
+3. Get the Channel ID where you want the bot to post.
+4. Set `DISCORD_TOKEN` and `DISCORD_CHANNEL_ID` in your `.env`.
+
+When a CAPTCHA appears, the bot will post the image to the channel. **Reply** to the bot's message with the solution code to solve it.
 
 ## License
 

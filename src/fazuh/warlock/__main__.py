@@ -8,8 +8,8 @@ async def main():
     parser = argparse.ArgumentParser(description="Warlock Bot")
     parser.add_argument(
         "module",
-        choices=["track", "war"],
-        help="Module to run (track or war).",
+        choices=["track", "war", "autofill"],
+        help="Module to run (track, war, or autofill).",
     )
     args = parser.parse_args()
 
@@ -24,6 +24,11 @@ async def main():
         from fazuh.warlock.module.war_bot import WarBot
 
         await WarBot().start()
+
+    elif args.module == "autofill":
+        from fazuh.warlock.module.auto_fill import AutoFill
+
+        await AutoFill().start()
 
 
 def main_sync():
