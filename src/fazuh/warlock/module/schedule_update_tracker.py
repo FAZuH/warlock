@@ -5,6 +5,7 @@ import io
 from pathlib import Path
 
 from bs4 import BeautifulSoup
+from bs4 import Tag
 from loguru import logger
 import requests
 
@@ -21,27 +22,19 @@ class ScheduleUpdateTracker:
             data_folder.mkdir(parents=True)
 
         self.cache_file = data_folder.joinpath("latest_courses.txt")
-        if not self.cache_file.exists():
+        self._first_run_no_cache = not self.cache_file.exists()
+        if self._first_run_no_cache:
             self.cache_file.touch()
 
         self.prev_content = self.cache_file.read_text() if self.cache_file.exists() else ""
 
     async def start(self):
-        self.siak = Siak(self.conf.username, self.conf.password)
+        self.siak = Siak(self.conf)
         await self.siak.start()
-        await self.siak.authenticate()
         while True:
             self.conf.load()  # Reload config to allow dynamic changes to .env
             try:
-                # Try to use existing session
-                if not self.siak.is_logged_in(await self.siak.content):
-                    # Otherwise re-authenticate
-                    await self.siak.close()
-                    self.siak = Siak(self.conf.username, self.conf.password)
-                    await self.siak.start()
-                    if not await self.siak.authenticate():
-                        continue
-
+                await self.siak.authenticate()
                 await self.run()
             except Exception as e:
                 logger.error(f"An error occurred: {e}")
@@ -60,10 +53,10 @@ class ScheduleUpdateTracker:
         if self.siak.page.url != self.conf.tracked_url:
             logger.error(f"Expected {self.conf.tracked_url}. Found {self.siak.page.url} instead.")
             return
-        if not self.siak.is_captcha_page(await self.siak.content):
+        if await self.siak.is_captcha_page():
             logger.error("Captcha page detected. Please solve the captcha manually.")
             return
-        if not self.siak.is_logged_in(await self.siak.content):
+        if not await self.siak.is_logged_in():
             logger.error("Not logged in. Please check your credentials.")
             return
 
@@ -84,6 +77,9 @@ class ScheduleUpdateTracker:
             # 2b. collect all following <tr> rows that belong to this course
             classes_info = []
             for sibling in hdr.parent.find_next_siblings("tr"):
+                if not isinstance(sibling, Tag):
+                    continue
+
                 # stop if we hit the next course header
                 if sibling.find("th", class_=("sub", "border2", "pad2")):
                     break
@@ -110,6 +106,18 @@ class ScheduleUpdateTracker:
         if self.prev_content == curr:
             logger.info("No updates detected.")
             return
+
+        # Special check: if this is the first run and we had no cache, don't send notifications.
+        # Just save the current state as the initial baseline.
+        if self._first_run_no_cache:
+            logger.info(
+                "First run with no previous cache. Saving initial state without notification."
+            )
+            self.prev_content = curr
+            self.cache_file.write_text(curr)
+            self._first_run_no_cache = False  # Reset flag so subsequent updates are tracked
+            return
+
         logger.info("Update detected!")
 
         # compare using set

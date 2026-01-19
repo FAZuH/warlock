@@ -1,7 +1,10 @@
 import asyncio
 import io
+
 import discord
+from discord.abc import Messageable
 from loguru import logger
+
 from fazuh.warlock.config import Config
 
 
@@ -51,6 +54,10 @@ class CaptchaBot(discord.Client):
             logger.error(f"Channel {self.channel_id} not found.")
             return None
 
+        if not isinstance(channel, Messageable):
+            logger.error(f"Channel {self.channel_id} is not messageable.")
+            return None
+
         try:
             file = discord.File(io.BytesIO(image_data), filename="captcha.png")
             message = await channel.send(
@@ -79,7 +86,7 @@ _bot_task: asyncio.Task | None = None
 _initialization_attempted: bool = False
 
 
-async def init_discord_bot():
+def init_discord_bot():
     """Initializes the Discord bot if config is valid."""
     global _bot, _bot_task, _initialization_attempted
 
@@ -114,7 +121,7 @@ async def init_discord_bot():
 async def get_captcha_solution(image_data: bytes) -> str | None:
     # Ensure init was attempted
     if not _initialization_attempted:
-        await init_discord_bot()
+        init_discord_bot()
 
     if not _bot:
         return None

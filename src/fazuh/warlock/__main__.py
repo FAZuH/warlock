@@ -17,7 +17,8 @@ async def main():
 
     from fazuh.warlock.bot import init_discord_bot
 
-    await init_discord_bot()
+    # NOTE: Early async bot initialization. on_ready state will be awaited when needed.
+    init_discord_bot()
 
     if args.module == "track":
         from fazuh.warlock.module.schedule_update_tracker import ScheduleUpdateTracker

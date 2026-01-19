@@ -1,22 +1,23 @@
 from loguru import logger
+
 from fazuh.warlock.siak.path import Path
 from fazuh.warlock.siak.siak import Siak
 
 
 class IrsService:
-    async def fill_irs(self, siak: Siak, courses: dict[str, str]) -> None:
+    async def fill_irs(self, siak: Siak, courses: dict[str, str]) -> bool:
         """Navigates to the Course Plan Edit page and fills the IRS form."""
         await siak.page.goto(Path.COURSE_PLAN_EDIT, wait_until="domcontentloaded")
 
         if siak.page.url != Path.COURSE_PLAN_EDIT:
             logger.error(f"Expected {Path.COURSE_PLAN_EDIT}. Found {siak.page.url} instead.")
-            return
+            return False
 
-        if await self.is_not_registration_period(siak):
+        if await siak.is_not_registration_period():
             logger.error(
                 "You cannot fill out the IRS because the academic registration period has not started."
             )
-            return
+            return False
 
         logger.success("Successfully navigated to the Course Plan Edit page.")
 
@@ -52,13 +53,7 @@ class IrsService:
         for key, val in pending_courses.items():
             logger.error(f"Course not found: {key} with prof: {val}")
 
-    async def is_not_registration_period(self, siak: Siak) -> bool:
-        """Check if the current period is not a registration period."""
-        content = await siak.page.content()
-        return (
-            "Anda tidak dapat mengisi IRS karena periode registrasi akademik belum dimulai"
-            in content
-        )
+        return True
 
     async def scroll_to_bottom(self, siak: Siak):
         await siak.page.evaluate("window.scrollTo(0, document.body.scrollHeight)")

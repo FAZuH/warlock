@@ -6,8 +6,8 @@ import time
 from loguru import logger
 
 from fazuh.warlock.config import Config
-from fazuh.warlock.siak.siak import Siak
 from fazuh.warlock.service.irs_service import IrsService
+from fazuh.warlock.siak.siak import Siak
 
 
 class WarBot:
@@ -25,22 +25,28 @@ class WarBot:
     async def start(self):
         # NOTE: Don't reuse sessions. is_not_registration_period() will always return True until we re-authenticate.
         # This means that the /main/CoursePlan/CoursePlanEdit page WILL NOT update until we logout, then login again
-        while True:
-            self.siak = Siak(self.conf.username, self.conf.password)
-            await self.siak.start()
-            self.conf.load()
-            try:
-                if not await self.siak.authenticate():
-                    logger.error("Authentication failed. Is the server down?")
-                    continue
+        self.siak = Siak(self.conf)
+        await self.siak.start()
 
-                await self.run()
-            except Exception as e:
-                logger.error(f"An error occurred: {e}")
-            finally:
-                await self.siak.close()
-                logger.info(f"Retrying in {self.conf.warbot_interval} seconds...")
-                await asyncio.sleep(self.conf.warbot_interval)
+        try:
+            while True:
+                self.conf.load()
+                try:
+                    if not await self.siak.authenticate():
+                        logger.error("Authentication failed. Is the server down?")
+                        continue
+
+                    await self.run()
+                except Exception as e:
+                    logger.error(f"An error occurred: {e}")
+                finally:
+                    # Instead of closing browser, just logout
+                    await self.siak.unauthenticate()
+                    logger.info(f"Retrying in {self.conf.warbot_interval} seconds...")
+                    await asyncio.sleep(self.conf.warbot_interval)
+        finally:
+            # Ensure we close browser if loop breaks
+            await self.siak.close()
 
     async def run(self):
         # Pass a copy of courses to avoid modifying the original list if we retry

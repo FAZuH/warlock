@@ -1,10 +1,10 @@
 import asyncio
 import base64
+from collections.abc import Iterable
+from typing import Any
 
 from loguru import logger
 from playwright.async_api import async_playwright
-from playwright.async_api import Browser
-from playwright.async_api import Page
 import requests
 
 from fazuh.warlock.bot import get_captcha_solution
@@ -13,10 +13,10 @@ from fazuh.warlock.siak.path import Path
 
 
 class Siak:
-    def __init__(self, username: str, password: str):
-        self.username = username
-        self.password = password
-        self.config = Config()
+    MAX_RETRIES = 5
+
+    def __init__(self, config: Config):
+        self.config = config
 
     async def start(self):
         self.playwright = await async_playwright().start()
@@ -32,75 +32,108 @@ class Siak:
                 logger.error(f"Unsupported browser: {self.config.browser}. Defaulting to Chromium.")
                 browser = self.playwright.chromium
 
-        self.browser = await browser.launch(headless=self.config.headless)
+        launch_kwargs: dict[str, Any] = {"headless": self.config.headless}
+        if self.config.browser == "brave":
+            launch_kwargs["executable_path"] = "/usr/bin/brave"
+
+        self.browser = await browser.launch(**launch_kwargs)
         self.page = await self.browser.new_page()
 
-    async def authenticate(self) -> bool:
-        if not self.is_logged_in(await self.content):
+    async def authenticate(self, retries: int = 0) -> bool:
+        if retries > self.MAX_RETRIES:
+            logger.error("Maximum authentication retries reached.")
+            return False
+
+        if await self.is_logged_in():
             return True  # Already logged in, no need to authenticate
 
         try:
-            if self.page.url != Path.AUTHENTICATION:
-                await self.page.goto(Path.AUTHENTICATION)
+            if not await self.is_login_page():
+                await self.page.goto(Path.HOSTNAME)
 
+            await self.page.wait_for_load_state()
             # Handle pre-login CAPTCHA page
-            if await self.handle_captcha(await self.content):
-                return await self.authenticate()
+            if await self.handle_captcha():
+                # Captcha handled, retry auth immediately but increment count to be safe
+                return await self.authenticate(retries + 1)
 
-            await self.page.wait_for_selector("input[name=u]", state="visible")
+            await self.page.wait_for_load_state()
             # Proceed with standard login
-            await self.page.fill("input[name=u]", self.username)
-            await self.page.fill("input[name=p]", self.password)
-            await self.page.click("input[type=submit]")
-            await self.page.wait_for_load_state("networkidle")
+            await self.page.locator("input[name=u]").click()
+            await self.page.locator("input[name=u]").fill(self.config.username)
+
+            await self.page.locator("input[name=p]").click()
+            await self.page.locator("input[name=p]").fill(self.config.password)
+
+            # Hover then click to simulate human interaction
+            submit_btn = self.page.locator("input[type=submit]")
+            await submit_btn.hover()
+            await self.page.wait_for_timeout(200)
+
+            async with self.page.expect_navigation(wait_until="networkidle"):
+                await submit_btn.click()
 
             # Handle post-login CAPTCHA page (possible)
-            if await self.handle_captcha(await self.content):
-                return await self.authenticate()
+            await self.page.wait_for_load_state()
+            if await self.handle_captcha():
+                return await self.authenticate(retries + 1)
 
         except Exception as e:
             logger.error(f"An unexpected error occurred during authentication: {e}")
+            # Don't retry immediately on exception to avoid tight loops, just return fail or let outer loop handle
             return False
+
+        await self.page.wait_for_load_state()
+        if await self.is_login_page():
+            logger.warning(f"Still on login page after attempt {retries + 1}. Retrying...")
+            await asyncio.sleep(1)
+            return await self.authenticate(retries + 1)
 
         if not await self.handle_role_selection():
             return False
 
-        if not self.check_page(await self.content):
+        await self.page.wait_for_load_state()
+        if not await self.check_page():
             return False
 
         logger.info("Authentication successful.")
         return True
 
-    def check_page(self, content) -> bool:
-        if self.is_rejected_page(content):
+    async def unauthenticate(self):
+        """Logs out from the application."""
+        if hasattr(self, "page"):
+            await self.page.goto(Path.LOGOUT)
+            logger.info("Logged out successfully.")
+
+    async def check_page(self) -> bool:
+        if await self.is_rejected_page():
             logger.error("The requested URL was rejected.")
             return False
-        if self.is_high_load_page(content):
+        if await self.is_high_load_page():
             logger.error("The server is under high load. Please try again later.")
             return False
-        if self.is_inaccessible_page(content):
+        if await self.is_inaccessible_page():
             logger.error("The page is currently inaccessible. Please try again later.")
             return False
         return True
 
     async def handle_role_selection(self) -> bool:
         """Handles role selection if no role is selected."""
-        if self.is_role_selected(await self.content):
+        if await self.is_role_selected():
             return True
 
         logger.info("No role selected. Navigating to change role page.")
         await self.page.goto(Path.CHANGE_ROLE)
-        await self.page.wait_for_load_state("networkidle")
 
-        if not self.is_role_selected(await self.content):
+        if not await self.is_role_selected():
             logger.error("Failed to select a role. Please check your account settings.")
             return False
 
         return True
 
-    async def handle_captcha(self, content: str) -> bool:
+    async def handle_captcha(self) -> bool:
         """Extracts CAPTCHA, notifies admin, and gets solution from CLI."""
-        if not self.is_captcha_page(content):
+        if not await self.is_captcha_page():
             return False
 
         try:
@@ -144,7 +177,7 @@ class Siak:
                     # Check if answer input is still visible
                     if not await self.page.is_visible("input[name=answer]"):
                         # Double check content logic to be safe
-                        if not self.is_captcha_page(await self.content):
+                        if not await self.is_captcha_page():
                             logger.success("CAPTCHA passed.")
                             break
                 except Exception:
@@ -158,36 +191,60 @@ class Siak:
 
         return True
 
-    def is_logged_in(self, content: str) -> bool:
+    async def is_not_registration_period(self, content: str | None = None) -> bool:
+        """Check if the current period is not a registration period."""
+        return not await self._check_page_content(
+            ["Anda tidak dapat mengisi IRS karena periode registrasi akademik belum dimulai"],
+            content,
+        )
+
+    async def is_login_page(self, content: str | None = None) -> bool:
+        """Check if current page is the login page."""
+        return Path.AUTHENTICATION in self.page.url
+        return await self._check_page_content(["Waspada terhadap pencurian password!"], content)
+
+    async def is_logged_in(self, content: str | None = None) -> bool:
         """Check if the user is logged in."""
-        return "Logout Counter" in content
+        return await self._check_page_content(["Logout Counter"], content)
 
-    def is_role_selected(self, content: str) -> bool:
+    async def is_role_selected(self, content: str | None = None) -> bool:
         """Check if a role is selected."""
-        return "No role selected" not in content
+        return not await self._check_page_content(["No role selected"], content)
 
-    def is_captcha_page(self, content: str) -> bool:
+    async def is_captcha_page(self, content: str | None = None) -> bool:
         """Check if the current page is a CAPTCHA page."""
         keywords = [
             "This question is for testing whether you are a human visitor",
             "What code is in the image?",
             "You have entered an invalid answer",
         ]
-        return any(keyword in content for keyword in keywords)
+        return await self._check_page_content(keywords, content)
 
-    def is_rejected_page(self, content: str) -> bool:
+    async def is_rejected_page(self, content: str | None = None) -> bool:
         """Check if the current page is a rejected URL page."""
-        return "The requested URL was rejected" in content
+        return await self._check_page_content(["The requested URL was rejected"], content)
 
-    def is_high_load_page(self, content: str) -> bool:
+    async def is_high_load_page(self, content: str | None = None) -> bool:
         """Check if the current page indicates high server load."""
         # Maaf, server SIAKNG sedang mengalami load tinggi dan belum dapat melayani request Anda saat ini.
         # Silahkan mencoba beberapa saat lagi.
-        return "Silahkan mencoba beberapa saat lagi." in content
+        return await self._check_page_content(
+            ["server SIAKNG sedang mengalami load tinggi"], content
+        )
 
-    def is_inaccessible_page(self, content: str) -> bool:
+    async def is_inaccessible_page(self, content: str | None = None) -> bool:
         """Check if the current page is inaccessible."""
-        return "Silakan mencoba beberapa saat lagi." in content
+        return await self._check_page_content(["Silakan mencoba beberapa saat lagi."], content)
+
+    async def _check_page_content(
+        self, keywords: Iterable[str], content: str | None = None
+    ) -> bool:
+        """Check if page contents contains a specific string"""
+        if content is None:
+            if not hasattr(self, "page"):
+                return False
+            content = await self.content
+        return any(kw in content for kw in keywords)
 
     async def close(self):
         # NOTE: self.browser and self.playwright is created at self.start(), not self.__init__(),
