@@ -20,20 +20,23 @@ async def main():
     # NOTE: Early async bot initialization. on_ready state will be awaited when needed.
     init_discord_bot()
 
-    if args.module == "track":
-        from fazuh.warlock.module.schedule_update_tracker import ScheduleUpdateTracker
+    try:
+        if args.module == "track":
+            from fazuh.warlock.module.schedule_update_tracker import ScheduleUpdateTracker
 
-        await ScheduleUpdateTracker().start()
+            await ScheduleUpdateTracker().start()
 
-    elif args.module == "war":
-        from fazuh.warlock.module.war_bot import WarBot
+        elif args.module == "war":
+            from fazuh.warlock.module.war_bot import WarBot
 
-        await WarBot().start()
+            await WarBot().start()
 
-    elif args.module == "autofill":
-        from fazuh.warlock.module.auto_fill import AutoFill
+        elif args.module == "autofill":
+            from fazuh.warlock.module.auto_fill import AutoFill
 
-        await AutoFill().start()
+            await AutoFill().start()
+    except Exception as e:
+        logger.error(e)
 
 
 def main_sync():

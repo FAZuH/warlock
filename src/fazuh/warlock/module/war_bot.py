@@ -27,14 +27,15 @@ class WarBot:
                 try:
                     if not await self.siak.authenticate():
                         logger.error("Authentication failed. Is the server down?")
+                        await self.siak.restart()
                         continue
 
                     await self.run()
+                    await self.siak.unauthenticate()
                 except Exception as e:
                     logger.error(f"An error occurred: {e}")
                 finally:
                     # Instead of closing browser, just logout
-                    await self.siak.unauthenticate()
                     logger.info(f"Retrying in {self.conf.warbot_interval} seconds...")
                     await asyncio.sleep(self.conf.warbot_interval)
         finally:
@@ -43,7 +44,8 @@ class WarBot:
 
     async def run(self):
         # Pass a copy of courses to avoid modifying the original list if we retry
-        await self.irs_service.fill_irs(self.siak, self.courses.copy())
+        if await self.irs_service.fill_irs(self.siak, self.courses) is False:
+            return False
 
         if self.conf.warbot_autosubmit:
             await self.siak.page.click("input[type=submit][value='Simpan IRS']")
@@ -53,4 +55,6 @@ class WarBot:
 
         logger.success("WarBot completed successfully.")
         logger.info("Script finished. Press Ctrl+C to exit (including the browser).")
-        time.sleep(float("inf"))
+        # Keep browser open
+        while True:
+            await asyncio.sleep(1)

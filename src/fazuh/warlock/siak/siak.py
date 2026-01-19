@@ -13,12 +13,12 @@ from fazuh.warlock.siak.path import Path
 
 
 class Siak:
-    MAX_RETRIES = 5
-
-    def __init__(self, config: Config):
+    def __init__(self, config: Config, auth_max_retries: int = 5):
         self.config = config
+        self.auth_max_retries = auth_max_retries
 
     async def start(self):
+        """Start the browser"""
         self.playwright = await async_playwright().start()
 
         match self.config.browser:
@@ -39,8 +39,22 @@ class Siak:
         self.browser = await browser.launch(**launch_kwargs)
         self.page = await self.browser.new_page()
 
+    async def close(self):
+        """Close the browser"""
+        # NOTE: self.browser and self.playwright is created at self.start(), not self.__init__(),
+        # thus there is no guarantee it is initialized yet.
+        if hasattr(self, "browser"):
+            await self.browser.close()
+        if hasattr(self, "playwright"):
+            await self.playwright.stop()
+
+    async def restart(self):
+        """Close, and restart the browser"""
+        await self.close()
+        await self.start()
+
     async def authenticate(self, retries: int = 0) -> bool:
-        if retries > self.MAX_RETRIES:
+        if retries > self.auth_max_retries:
             logger.error("Maximum authentication retries reached.")
             return False
 
@@ -51,7 +65,6 @@ class Siak:
             if not await self.is_login_page():
                 await self.page.goto(Path.HOSTNAME)
 
-            await self.page.wait_for_load_state()
             # Handle pre-login CAPTCHA page
             if await self.handle_captcha():
                 # Captcha handled, retry auth immediately but increment count to be safe
@@ -74,7 +87,6 @@ class Siak:
                 await submit_btn.click()
 
             # Handle post-login CAPTCHA page (possible)
-            await self.page.wait_for_load_state()
             if await self.handle_captcha():
                 return await self.authenticate(retries + 1)
 
@@ -93,7 +105,7 @@ class Siak:
             return False
 
         await self.page.wait_for_load_state()
-        if not await self.check_page():
+        if not await self.does_need_restart():
             return False
 
         logger.info("Authentication successful.")
@@ -105,7 +117,8 @@ class Siak:
             await self.page.goto(Path.LOGOUT)
             logger.info("Logged out successfully.")
 
-    async def check_page(self) -> bool:
+    async def does_need_restart(self) -> bool:
+        """If this returns false, the browser should restart to clear sessions."""
         if await self.is_rejected_page():
             logger.error("The requested URL was rejected.")
             return False
@@ -133,6 +146,7 @@ class Siak:
 
     async def handle_captcha(self) -> bool:
         """Extracts CAPTCHA, notifies admin, and gets solution from CLI."""
+        await self.page.wait_for_load_state()
         if not await self.is_captcha_page():
             return False
 
@@ -193,14 +207,16 @@ class Siak:
 
     async def is_not_registration_period(self, content: str | None = None) -> bool:
         """Check if the current period is not a registration period."""
-        return not await self._check_page_content(
+        ret = await self._check_page_content(
             ["Anda tidak dapat mengisi IRS karena periode registrasi akademik belum dimulai"],
             content,
         )
+        return ret
 
     async def is_login_page(self, content: str | None = None) -> bool:
         """Check if current page is the login page."""
-        return Path.AUTHENTICATION in self.page.url
+        # return Path.AUTHENTICATION in self.page.url
+        # NOTE: `self.page.url` be in `Path.AUTHENTICATION`, but the page shows "The request URL was rejected"
         return await self._check_page_content(["Waspada terhadap pencurian password!"], content)
 
     async def is_logged_in(self, content: str | None = None) -> bool:
@@ -245,14 +261,6 @@ class Siak:
                 return False
             content = await self.content
         return any(kw in content for kw in keywords)
-
-    async def close(self):
-        # NOTE: self.browser and self.playwright is created at self.start(), not self.__init__(),
-        # thus there is no guarantee it is initialized yet.
-        if hasattr(self, "browser"):
-            await self.browser.close()
-        if hasattr(self, "playwright"):
-            await self.playwright.stop()
 
     @property
     async def content(self) -> str:
