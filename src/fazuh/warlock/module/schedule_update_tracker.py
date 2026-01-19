@@ -107,77 +107,167 @@ class ScheduleUpdateTracker:
             logger.info("No updates detected.")
             return
 
-        # Special check: if this is the first run and we had no cache, don't send notifications.
-        # Just save the current state as the initial baseline.
         if self._first_run_no_cache:
             logger.info(
                 "First run with no previous cache. Saving initial state without notification."
             )
             self.prev_content = curr
             self.cache_file.write_text(curr)
-            self._first_run_no_cache = False  # Reset flag so subsequent updates are tracked
+            self._first_run_no_cache = False
             return
 
         logger.info("Update detected!")
 
-        # compare using set
-        old_courses = set(self.prev_content.splitlines()) if self.prev_content else set()
-        new_courses = set(courses)
-        added_courses = new_courses - old_courses
-        removed_courses = old_courses - new_courses
+        # Parse old and new into structured format for better diff
+        old_courses = self._parse_courses_dict(self.prev_content)
+        new_courses = self._parse_courses_dict(curr)
 
-        changes = []
-        changes.extend([f"+ {e}" for e in added_courses])
-        changes.extend([f"- {e}" for e in removed_courses])
-        changes.sort()
+        changes = self._generate_detailed_diff(old_courses, new_courses)
+        
         if not changes:
             logger.info("No meaningful changes detected (only order changed).")
             return
 
-        # 4. Create diff and send to webhook
-        diff = "\n".join(changes)
-        logger.debug(diff)
-        await self._send_diff_to_webhook(self.conf.tracker_discord_webhook_url, diff)
+        logger.debug("\n".join(changes))
+        await self._send_changes_to_webhook(self.conf.tracker_discord_webhook_url, changes)
 
         self.prev_content = curr
         self.cache_file.write_text(curr)
 
-    async def _send_diff_to_webhook(self, webhook_url: str, diff: str):
-        message = "**Jadwal SIAK UI Berubah!**"
-        data = {
+    def _parse_courses_dict(self, content: str) -> dict[str, dict[str, list[str]]]:
+        """Parse course content into nested dict: {course_code: {course_info: str, classes: [class_details]}"""
+        result = {}
+        for line in content.splitlines():
+            if ": |" in line:
+                course_info, classes_str = line.split(": |", 1)
+                # Extract course code (first part before the dash)
+                course_code = course_info.split("-")[0].strip()
+                classes = [c.strip() for c in classes_str.split(" | ") if c.strip()]
+                result[course_code] = {
+                    "info": course_info,
+                    "classes": classes
+                }
+        return result
+
+    def _generate_detailed_diff(self, old: dict, new: dict) -> list[str]:
+        """Generate human-readable diff showing what changed."""
+        changes = []
+        
+        # New courses
+        for code in sorted(new.keys() - old.keys()):
+            course_info = new[code]["info"]
+            course_name = course_info.split(";")[0].strip()
+            changes.append(f"- **🆕 {course_name}**")
+            for class_detail in new[code]["classes"]:
+                parts = class_detail.split(";")
+                if len(parts) >= 5:
+                    kelas = parts[0].replace("Kelas", "").strip()
+                    waktu = parts[3].strip()
+                    ruang = parts[4].strip()
+                    changes.append(f"  - {kelas}: `{waktu}` di `{ruang}`")
+            changes.append("")
+        
+        # Removed courses
+        for code in sorted(old.keys() - new.keys()):
+            course_info = old[code]["info"]
+            course_name = course_info.split(";")[0].strip()
+            changes.append(f"- **🗑️ {course_name}**")
+            changes.append("")
+        
+        # Modified courses
+        for code in sorted(old.keys() & new.keys()):
+            old_classes = set(old[code]["classes"])
+            new_classes = set(new[code]["classes"])
+            
+            added = new_classes - old_classes
+            removed = old_classes - new_classes
+            
+            if not added and not removed:
+                continue
+            
+            course_info = new[code]["info"]
+            course_name = course_info.split(";")[0].strip()
+            changes.append(f"- **✏️ {course_name}**")
+            
+            for class_detail in removed:
+                parts = class_detail.split(";")
+                if len(parts) >= 5:
+                    kelas = parts[0].replace("Kelas", "").strip()
+                    waktu = parts[3].strip()
+                    ruang = parts[4].strip()
+                    changes.append(f"  - ❌ ~~{kelas}: `{waktu}` di `{ruang}`~~")
+            
+            for class_detail in added:
+                parts = class_detail.split(";")
+                if len(parts) >= 5:
+                    kelas = parts[0].replace("Kelas", "").strip()
+                    waktu = parts[3].strip()
+                    ruang = parts[4].strip()
+                    changes.append(f"  - ✅ {kelas}: `{waktu}` di `{ruang}`")
+            
+            changes.append("")
+        
+        return changes
+
+    async def _send_changes_to_webhook(self, webhook_url: str, changes: list[str]):
+        """Send changes to Discord, splitting into multiple messages if needed."""
+        # Extract period from tracked_url
+        period_code = self._extract_period_from_url(self.conf.tracked_url)
+        period_display = self._format_period(period_code)
+        
+        message_header = f"## Jadwal SIAK UI Berubah ({period_display})\n"
+        base_data = {
             "username": "Warlock Tracker",
             "avatar_url": "https://academic.ui.ac.id/favicon.ico",
         }
-        files = None
-        diff_file = None
-
-        # Discord has a 2000 character limit for messages (see https://discord.com/developers/docs/resources/webhook#execute-webhook-jsonform-params)
-        # Send text if diff is under 1900 characters, otherwise send as file
-        if len(diff) < 1900:
-            data["content"] = f"{message}\n```diff\n{diff}\n```"
-        else:
-            data["content"] = message
-            diff_file = io.BytesIO(diff.encode("utf-8"))
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            filename = f"siak_schedule_diff_{timestamp}.txt"
-            files = {"file": (filename, diff_file, "text/plain")}
-
+        
+        MAX_LENGTH = 1900
+        
+        full_message = message_header + "\n".join(changes)
+        
+        if len(full_message) < MAX_LENGTH:
+            data = base_data.copy()
+            data["content"] = full_message
+            try:
+                resp = await asyncio.to_thread(requests.post, webhook_url, json=data)
+                resp.raise_for_status()
+                logger.info("Changes sent to webhook successfully.")
+                return
+            except requests.exceptions.RequestException as e:
+                logger.error(f"Error sending to webhook: {e}")
+                return
+        
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = f"siak_schedule_diff_{timestamp}.txt"
+        diff_content = "\n".join(changes)
+        diff_file = io.BytesIO(diff_content.encode("utf-8"))
+        
+        data = base_data.copy()
+        data["content"] = f"{message_header}\n*(Perubahan terlalu panjang, lihat file)*"
+        files = {"file": (filename, diff_file, "text/plain")}
+        
         try:
             resp = await asyncio.to_thread(requests.post, webhook_url, data=data, files=files)
             resp.raise_for_status()
-            logger.info("Content sent to webhook successfully.")
+            logger.info("Changes sent to webhook as file successfully.")
         except requests.exceptions.RequestException as e:
-            logger.error(f"Error sending content to webhook: {e}")
+            logger.error(f"Error sending to webhook: {e}")
         finally:
-            if diff_file:
-                diff_file.close()
+            diff_file.close()
 
-    def _get_diff(self, old: str, new: str) -> str:
-        diff = difflib.unified_diff(
-            old.splitlines(keepends=True),
-            new.splitlines(keepends=True),
-            fromfile="previous",
-            tofile="current",
-            lineterm="",
-        )
-        return "".join(diff)
+    def _extract_period_from_url(self, url: str) -> str:
+        """Extract period code from URL. Returns '2025-2' from '...?period=2025-2'"""
+        if "period=" in url:
+            return url.split("period=")[1].split("&")[0]
+        return "Unknown"
+
+    def _format_period(self, period_code: str) -> str:
+        """Convert period code to readable format. '2025-2' -> 'Semester Genap 2025/2026'"""
+        if "-" not in period_code:
+            return period_code
+        
+        year, semester = period_code.split("-")
+        semester_name = "Ganjil" if semester == "1" else "Genap"
+        next_year = str(int(year) + 1)
+        
+        return f"Semester {semester_name} {year}/{next_year}"
