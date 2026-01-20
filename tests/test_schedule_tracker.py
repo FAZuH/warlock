@@ -67,7 +67,7 @@ async def test_schedule_tracker_run(mock_siak, schedule_html, tmp_path):
 
             # Remove one line from cache to simulate it being "added" in the next run
             lines = original_content.splitlines()
-            removed_line = lines.pop(0)
+            lines.pop(0)
             cache_file.write_text("\n".join(lines))
 
             # Re-init tracker to load modified cache

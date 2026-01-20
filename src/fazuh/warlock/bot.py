@@ -114,8 +114,9 @@ def init_discord_bot():
             "Discord Bot configuration incomplete. Both DISCORD_TOKEN and DISCORD_CHANNEL_ID are required. Bot disabled."
         )
     else:
-        # Neither set, silent pass
-        pass
+        logger.info(
+            "Both DISCORD_TOKEN and DISCORD_CHANNEL_ID is empty. Skipped bot initialization."
+        )
 
 
 async def get_captcha_solution(image_data: bytes) -> str | None:

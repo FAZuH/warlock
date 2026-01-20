@@ -6,15 +6,18 @@ from fazuh.warlock.siak.siak import Siak
 
 
 class IrsService:
-    async def fill_irs(self, siak: Siak, courses: list[CourseTarget]) -> bool:
-        """Navigates to the Course Plan Edit page and fills the IRS form."""
-        await siak.page.goto(Path.COURSE_PLAN_EDIT, wait_until="domcontentloaded")
+    def __init__(self, siak: Siak) -> None:
+        self.siak = siak
 
-        if siak.page.url != Path.COURSE_PLAN_EDIT:
-            logger.error(f"Expected {Path.COURSE_PLAN_EDIT}. Found {siak.page.url} instead.")
+    async def fill_irs(self, courses: list[CourseTarget]) -> bool:
+        """Navigates to the Course Plan Edit page and fills the IRS form."""
+        await self.siak.page.goto(Path.COURSE_PLAN_EDIT, wait_until="domcontentloaded")
+
+        if self.siak.page.url != Path.COURSE_PLAN_EDIT:
+            logger.error(f"Expected {Path.COURSE_PLAN_EDIT}. Found {self.siak.page.url} instead.")
             return False
 
-        if await siak.is_not_registration_period():
+        if await self.siak.is_not_registration_period():
             logger.error(
                 "You cannot fill out the IRS because the academic registration period has not started."
             )
@@ -25,7 +28,7 @@ class IrsService:
         # Make a copy of courses to track which ones are found
         pending_courses = courses.copy()
 
-        rows = await siak.page.query_selector_all("tr")
+        rows = await self.siak.page.query_selector_all("tr")
         for row in rows:
             if not pending_courses:
                 break
@@ -64,5 +67,12 @@ class IrsService:
 
         return True
 
-    async def scroll_to_bottom(self, siak: Siak):
-        await siak.page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
+    async def scroll_to_bottom(self):
+        await self.siak.page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
+
+    async def submit_irs(self, autosubmit: bool = False):
+        if autosubmit:
+            await self.siak.page.click("input[type=submit][value='Simpan IRS']")
+            logger.success("IRS saved.")
+        else:
+            await self.scroll_to_bottom()

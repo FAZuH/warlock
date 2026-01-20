@@ -12,12 +12,11 @@ from fazuh.warlock.siak.siak import Siak
 class AutoFill:
     def __init__(self):
         self.conf = Config()
-        self.irs_service = IrsService()
+        self.siak = Siak(self.conf)
+        self.irs_service = IrsService(self.siak)
         self.courses = load_courses()
 
     async def start(self):
-        # We need credentials for Siak constructor, even if we don't use them for auto-login
-        self.siak = Siak(self.conf)
         await self.siak.start()
 
         try:
@@ -40,10 +39,10 @@ class AutoFill:
                     await asyncio.sleep(1)
 
             logger.info("Proceeding to fill IRS...")
-            if not await self.irs_service.fill_irs(self.siak, self.courses.copy()):
+            if not await self.irs_service.fill_irs(self.courses.copy()):
                 return
 
-            await self.irs_service.scroll_to_bottom(self.siak)
+            await self.irs_service.submit_irs(self.conf.warbot_autosubmit)
 
             logger.success("AutoFill completed successfully.")
             logger.info("Script finished. Press Ctrl+C to exit (including the browser).")

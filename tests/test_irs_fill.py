@@ -50,10 +50,10 @@ async def test_fill_irs_integration(mock_siak, irs_html):
 
             res = None
             if sel == "label":
-                l = r.find("label")
-                if l:
+                lab = r.find("label")
+                if lab:
                     res = MagicMock()
-                    res.inner_text = AsyncMock(return_value=l.get_text(strip=True))
+                    res.inner_text = AsyncMock(return_value=lab.get_text(strip=True))
             elif sel == "td:nth-child(9)":
                 tds = r.find_all("td")
                 if len(tds) >= 9:
@@ -79,7 +79,7 @@ async def test_fill_irs_integration(mock_siak, irs_html):
 
     mock_siak.page.query_selector_all = AsyncMock(return_value=mock_rows)
 
-    service = IrsService()
+    service = IrsService(mock_siak)
 
     targets = [
         CourseTarget(course="Analisis 1", prof="Putri"),
@@ -87,7 +87,7 @@ async def test_fill_irs_integration(mock_siak, irs_html):
         CourseTarget(course="AnDat Kategorik", time="Senin, 10.00-12.30"),
     ]
 
-    success = await service.fill_irs(mock_siak, targets)
+    success = await service.fill_irs(targets)
 
     assert success is True
 
