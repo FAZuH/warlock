@@ -6,6 +6,18 @@ https://github.com/user-attachments/assets/e1f077d2-494c-43de-b5be-4a1bfbb87a3d
 > [!warning]
 > This script may not work as expected. Use at your own risk.
 
+## Table of Contents
+
+- [Features](#features)
+- [Installation](#installation)
+- [Usage](#usage)
+  - [War bot](#war-bot)
+  - [Schedule update tracker](#schedule-update-tracker)
+  - [AutoFill](#autofill)
+  - [Discord Bot for CAPTCHA](#discord-bot-for-captcha)
+  - [Testing](#testing)
+- [License](#license)
+
 ## Features
 
 - Automatic authentication to university portal
@@ -55,6 +67,9 @@ Create a `courses.yaml` (recommended) or `courses.json` file to configure your t
   code: "785627"
 ```
 
+> [!tip]
+> You can use `--test` to verify your `courses.yaml` config. Read further instructions at [#testing]
+
 You can run using `uv run warlock war`.
 
 The War bot supports flexible matching criteria (case-insensitive partial matches):
@@ -89,6 +104,21 @@ You can configure a Discord bot to handle CAPTCHA challenges remotely.
 When a CAPTCHA appears, the bot will post the image to the channel. **Reply** to the bot's message with the solution code to solve it.
 
 **NOTE**: If you do not configure the Discord Bot, you must set `HEADLESS=false` in your `.env`. The browser window will open, and you will need to solve the CAPTCHA manually in the browser when prompted.
+
+### Testing
+
+You can verify your `courses.yaml` configuration against a saved schedule HTML file without connecting to the actual server. This allows you to check if your target courses match the available classes correctly.
+
+**Arguments:**
+- `--test`: Enables test mode (skips authentication, mocks responses).
+- `--jadwal-html <path>`: Path to the saved "Jadwal Kelas Mata Kuliah" HTML file.
+
+**Example:**
+```bash
+uv run warlock war --test --jadwal-html "data/Jadwal Kelas Mata Kuliah - SIAK NG.html"
+```
+
+This will run the bot in test mode, generate a mock IRS page populated with courses from the provided HTML, and attempt to select the courses defined in your `courses.yaml`. Check the logs to see which courses were selected.
 
 ## License
 
