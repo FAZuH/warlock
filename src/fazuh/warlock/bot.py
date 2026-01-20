@@ -34,7 +34,7 @@ class CaptchaBot(discord.Client):
                 solution = message.content.strip()
                 logger.info(f"Received CAPTCHA solution from {message.author}")
                 future.set_result(solution)
-                
+
                 # Get the original bot message and add reaction to it
                 try:
                     channel = message.channel

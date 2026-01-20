@@ -2,8 +2,8 @@ import asyncio
 from datetime import datetime
 import io
 from pathlib import Path
-from typing import Any
 from time import time
+from typing import Any
 
 from bs4 import BeautifulSoup
 from bs4 import Tag
@@ -50,7 +50,9 @@ class ScheduleUpdateTracker:
                 else:
                     logger.info("Schedule update tracker completed successfully.")
                 finally:
-                    logger.info( f"Waiting for the next check in {self.conf.tracker_interval} seconds...")
+                    logger.info(
+                        f"Waiting for the next check in {self.conf.tracker_interval} seconds..."
+                    )
                     await asyncio.sleep(self.conf.tracker_interval)
         finally:
             # Ensure we close browser if loop breaks
@@ -172,7 +174,7 @@ class ScheduleUpdateTracker:
             f"MATH202 - Linear Algebra: | {mk_cls('A', 'Tue 10.00', '202')}",
             f"PHYS102 - Physics II: | {mk_cls('A', 'Wed 08.00', '303')}",
             f"UNCHANGED01 - Static Course: | {mk_cls('A', 'Fri 13.00', '404')}",
-            "SCMA601006 -Aljabar Linier 1(3 SKS, Term 2); Kurikulum 01.01.03.01-2024: | KelasAlin 1 (A); Indonesia; 02/02/2026 - 05/06/202602/02/2026 - 05/06/2026; Senin, 13.00-14.40Kamis, 08.00-09.40; Lab. Multidisiplin 303Lab. Multidisiplin 303; - Dr. Hengki Tasman, S.Si., M.Si. | KelasAlin 1 (B); Indonesia; 02/02/2026 - 05/06/202602/02/2026 - 05/06/2026; Senin, 13.00-14.40Jumat, 08.00-09.40; Planet Earth; - Dr. Dipo Aldila, S.Si., M.Si. | KelasAlin 1 (D); Indonesia; 02/02/2026 - 05/06/202602/02/2026 - 05/06/2026; Senin, 13.00-14.40Kamis, 08.00-09.40; B.401B.401; - Dr. Denny Riama Silaban, M.Kom. | KelasAlin 1 (E); Indonesia; 02/02/2026 - 05/06/202602/02/2026 - 05/06/2026; Senin, 13.00-14.40Kamis, 08.00-09.40; B.303B.303; - Dra. Siti Aminah, S.Si., M.Kom. | KelasAlin 1 (F); Indonesia; 02/02/2026 - 05/06/202602/02/2026 - 05/06/2026; Senin, 13.00-14.40Kamis, 08.00-09.40; D.403D.403; - Dr. Debi Oktia Haryeni, S.Si., M.Si.-  Satoru Gojo, Ph.D."
+            "SCMA601006 -Aljabar Linier 1(3 SKS, Term 2); Kurikulum 01.01.03.01-2024: | KelasAlin 1 (A); Indonesia; 02/02/2026 - 05/06/202602/02/2026 - 05/06/2026; Senin, 13.00-14.40Kamis, 08.00-09.40; Lab. Multidisiplin 303Lab. Multidisiplin 303; - Dr. Hengki Tasman, S.Si., M.Si. | KelasAlin 1 (B); Indonesia; 02/02/2026 - 05/06/202602/02/2026 - 05/06/2026; Senin, 13.00-14.40Jumat, 08.00-09.40; Planet Earth; - Dr. Dipo Aldila, S.Si., M.Si. | KelasAlin 1 (D); Indonesia; 02/02/2026 - 05/06/202602/02/2026 - 05/06/2026; Senin, 13.00-14.40Kamis, 08.00-09.40; B.401B.401; - Dr. Denny Riama Silaban, M.Kom. | KelasAlin 1 (E); Indonesia; 02/02/2026 - 05/06/202602/02/2026 - 05/06/2026; Senin, 13.00-14.40Kamis, 08.00-09.40; B.303B.303; - Dra. Siti Aminah, S.Si., M.Kom. | KelasAlin 1 (F); Indonesia; 02/02/2026 - 05/06/202602/02/2026 - 05/06/2026; Senin, 13.00-14.40Kamis, 08.00-09.40; D.403D.403; - Dr. Debi Oktia Haryeni, S.Si., M.Si.-  Satoru Gojo, Ph.D.",
         ]
 
         new_courses_list = [
@@ -181,7 +183,7 @@ class ScheduleUpdateTracker:
             f"PHYS101 - Physics I: | {mk_cls('A', 'Wed 08.00', '303')}",  # Class B removed
             f"PHYS102 - Physics II: | {mk_cls('A', 'Wed 08.00', '303')} | {mk_cls('B', 'Wed 10.00', '303')} | {mk_cls('C', 'Wed 10.00', '303')}",  # Class B, C added
             f"UNCHANGED01 - Static Course: | {mk_cls('A', 'Fri 13.00', '404')}",
-            "SCMA601006 -Aljabar Linier 1(3 SKS, Term 2); Kurikulum 01.01.03.01-2024: | KelasAlin 1 (B); Indonesia; 02/02/2026 - 05/06/202602/02/2026 - 05/06/2026; Senin, 13.00-14.40Kamis, 08.00-09.40; B.402B.402; - Dr. Dipo Aldila, S.Si., M.Si. | KelasAlin 1 (C); Indonesia; 02/02/2026 - 05/06/202602/02/2026 - 05/06/2026; Senin, 13.00-14.40Kamis, 08.00-09.40; B.405B.405; - Dr. Helen Burhan, S.Si., M.Si. | KelasAlin 1 (E); Indonesia; 02/02/2026 - 05/06/202602/02/2026 - 05/06/2026; Senin, 13.00-14.40Kamis, 08.00-09.40; B.303B.303; - Dra. Siti Aminah, S.Si., M.Kom. | KelasAlin 1 (F); Indonesia; 02/02/2026 - 05/06/202602/02/2026 - 05/06/2026; Senin, 13.00-14.40Kamis, 08.00-09.40; D.403D.403; - Dr. Debi Oktia Haryeni, S.Si., M.Si.-  Herolistra Baskoroputro, Ph.D."
+            "SCMA601006 -Aljabar Linier 1(3 SKS, Term 2); Kurikulum 01.01.03.01-2024: | KelasAlin 1 (B); Indonesia; 02/02/2026 - 05/06/202602/02/2026 - 05/06/2026; Senin, 13.00-14.40Kamis, 08.00-09.40; B.402B.402; - Dr. Dipo Aldila, S.Si., M.Si. | KelasAlin 1 (C); Indonesia; 02/02/2026 - 05/06/202602/02/2026 - 05/06/2026; Senin, 13.00-14.40Kamis, 08.00-09.40; B.405B.405; - Dr. Helen Burhan, S.Si., M.Si. | KelasAlin 1 (E); Indonesia; 02/02/2026 - 05/06/202602/02/2026 - 05/06/2026; Senin, 13.00-14.40Kamis, 08.00-09.40; B.303B.303; - Dra. Siti Aminah, S.Si., M.Kom. | KelasAlin 1 (F); Indonesia; 02/02/2026 - 05/06/202602/02/2026 - 05/06/2026; Senin, 13.00-14.40Kamis, 08.00-09.40; D.403D.403; - Dr. Debi Oktia Haryeni, S.Si., M.Si.-  Herolistra Baskoroputro, Ph.D.",
         ]
 
         old_content = "\n".join(old_courses_list)
@@ -215,11 +217,13 @@ class ScheduleUpdateTracker:
                     waktu = parts[3].strip().lstrip("- ")
                     ruang = parts[4].strip().lstrip("- ")
                     dosen = parts[5].strip().lstrip("- ") if len(parts) > 5 else "-"
-                    fields.append({
-                        "name": kelas,
-                        "value": f"- {waktu}\n- {ruang}\n- {dosen}",
-                        "inline": False
-                    })
+                    fields.append(
+                        {
+                            "name": kelas,
+                            "value": f"- {waktu}\n- {ruang}\n- {dosen}",
+                            "inline": False,
+                        }
+                    )
 
             changes.append({"type": "new", "title": course_name, "fields": fields})
 
@@ -241,7 +245,7 @@ class ScheduleUpdateTracker:
                         result[kelas] = {
                             "waktu": parts[3].strip().lstrip("- "),
                             "ruang": parts[4].strip().lstrip("- "),
-                            "dosen": parts[5].strip().lstrip("- ") if len(parts) > 5 else "-"
+                            "dosen": parts[5].strip().lstrip("- ") if len(parts) > 5 else "-",
                         }
                 return result
 
@@ -268,46 +272,48 @@ class ScheduleUpdateTracker:
             course_name = course_info.split(";")[0].strip()
 
             fields = []
-            
+
             # Added classes
             for kelas in sorted(added_names):
                 info = new_classes_dict[kelas]
-                fields.append({
-                    "name": f"[+] ﻿ ﻿ ﻿  {kelas}",
-                    "value": f"- {info['waktu']}\n- {info['ruang']}\n- {info['dosen']}",
-                    "inline": False
-                })
+                fields.append(
+                    {
+                        "name": f"[+] ﻿ ﻿ ﻿  {kelas}",
+                        "value": f"- {info['waktu']}\n- {info['ruang']}\n- {info['dosen']}",
+                        "inline": False,
+                    }
+                )
 
             # Modified classes
             for kelas in sorted(modified_names):
                 old_info = old_classes_dict[kelas]
                 new_info = new_classes_dict[kelas]
-                
+
                 # Show what changed
                 lines = []
-                if old_info['waktu'] != new_info['waktu']:
+                if old_info["waktu"] != new_info["waktu"]:
                     lines.append(f"- ~~{old_info['waktu']}~~ → {new_info['waktu']}")
-                    
-                if old_info['ruang'] != new_info['ruang']:
+
+                if old_info["ruang"] != new_info["ruang"]:
                     lines.append(f"- ~~{old_info['ruang']}~~ → {new_info['ruang']}")
-                    
-                if old_info['dosen'] != new_info['dosen']:
+
+                if old_info["dosen"] != new_info["dosen"]:
                     lines.append(f"- ~~{old_info['dosen']}~~ → {new_info['dosen']}")
-                
-                fields.append({
-                    "name": f"[Δ] ﻿ ﻿ ﻿ {kelas}",
-                    "value": "\n".join(lines),
-                    "inline": False
-                })
+
+                fields.append(
+                    {"name": f"[Δ] ﻿ ﻿ ﻿ {kelas}", "value": "\n".join(lines), "inline": False}
+                )
 
             # Removed classes
             for kelas in sorted(removed_names):
                 info = old_classes_dict[kelas]
-                fields.append({
-                    "name": f"[−] ﻿ ﻿ ﻿  {kelas}",
-                    "value": f"- ~~{info['waktu']}~~\n- ~~{info['ruang']}~~\n- ~~{info['dosen']}~~",
-                    "inline": False
-                })
+                fields.append(
+                    {
+                        "name": f"[−] ﻿ ﻿ ﻿  {kelas}",
+                        "value": f"- ~~{info['waktu']}~~\n- ~~{info['ruang']}~~\n- ~~{info['dosen']}~~",
+                        "inline": False,
+                    }
+                )
 
             changes.append({"type": "modified", "title": course_name, "fields": fields})
 
@@ -339,7 +345,9 @@ class ScheduleUpdateTracker:
             embeds.append(embed)
 
         data = base_data.copy()
-        data["content"] = f"## Jadwal SIAK UI Berubah ({period_display})\n﻿\nBetween <t:{int(time() - self.conf.tracker_interval)}:R> to <t:{int(time())}:R>"
+        data["content"] = (
+            f"## Jadwal SIAK UI Berubah ({period_display})\n﻿\nBetween <t:{int(time() - self.conf.tracker_interval)}:R> to <t:{int(time())}:R>"
+        )
 
         # Discord allows max 10 embeds per webhook
         if len(embeds) > 10:
@@ -362,9 +370,7 @@ class ScheduleUpdateTracker:
             diff_file = io.BytesIO("\n".join(text_content).encode("utf-8"))
 
             data = base_data.copy()
-            data["content"] += (
-                "﻿\n\n*(Terlalu banyak perubahan, lihat file)*"
-            )
+            data["content"] += "﻿\n\n*(Terlalu banyak perubahan, lihat file)*"
             files = {"file": (filename, diff_file, "text/plain")}
 
             try:
