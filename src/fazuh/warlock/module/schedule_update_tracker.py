@@ -60,11 +60,10 @@ class ScheduleUpdateTracker:
 
     async def run(self):
         # 1. GET tracked page
-        await self.siak.page.goto(self.conf.tracked_url)
         if self.siak.page.url != self.conf.tracked_url:
-            logger.error(f"Expected {self.conf.tracked_url}. Found {self.siak.page.url} instead.")
-            return
-        if not await self.siak.is_logged_in():
+            await self.siak.page.goto(self.conf.tracked_url)
+
+        if not await self.siak.is_logged_in_page():
             logger.error("Not logged in. There was an issue in authenticating.")
             return
 

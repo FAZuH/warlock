@@ -71,8 +71,11 @@ class Siak:
             logger.error("Maximum authentication retries reached.")
             return False
 
-        await self.page.wait_for_load_state()
-        if await self.is_logged_in():
+        # NOTE: Siak.is_logged_in_page only checks if "Logout Counter" is in content.
+        # It could be that the method returns true, but our session is already invalidated in the server.
+        # so we reload and check if we are still "past login page".
+        await self.reload()
+        if await self.is_logged_in_page():
             return True  # Already logged in, no need to authenticate
 
         try:
@@ -240,7 +243,7 @@ class Siak:
         # NOTE: `self.page.url` be in `Path.AUTHENTICATION`, but the page shows "The request URL was rejected"
         return await self._check_page_content(["Waspada terhadap pencurian password!"], content)
 
-    async def is_logged_in(self, content: str | None = None) -> bool:
+    async def is_logged_in_page(self, content: str | None = None) -> bool:
         """Check if the user is logged in."""
         return await self._check_page_content(["Logout Counter"], content)
 

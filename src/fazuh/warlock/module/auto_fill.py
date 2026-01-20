@@ -31,9 +31,9 @@ class AutoFill:
 
                 while True:
                     content = await self.siak.content
-                    if await self.siak.is_logged_in(content) and await self.siak.is_role_selected(
+                    if await self.siak.is_logged_in_page(
                         content
-                    ):
+                    ) and await self.siak.is_role_selected(content):
                         logger.success("Login and role selection detected!")
                         break
                     await asyncio.sleep(1)
