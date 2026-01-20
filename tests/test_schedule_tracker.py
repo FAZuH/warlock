@@ -84,4 +84,4 @@ async def test_schedule_tracker_run(mock_siak, schedule_html, tmp_path):
             assert args[0] == "http://mock-webhook"
             changes = args[1]
             # Verify that some change was detected (should show the added course)
-            assert any("🆕" in line for line in changes)
+            assert any(change["type"] == "new" for change in changes)
