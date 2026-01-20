@@ -68,7 +68,7 @@ Create a `courses.yaml` (recommended) or `courses.json` file to configure your t
 ```
 
 > [!tip]
-> You can use `--test` to verify your `courses.yaml` config. Read further instructions at [#testing]
+> You can use `--test` to verify your `courses.yaml` config. Read further instructions at [Testing](#testing) section
 
 You can run using `uv run warlock war`.
 
