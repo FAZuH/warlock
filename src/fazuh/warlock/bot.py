@@ -34,10 +34,14 @@ class CaptchaBot(discord.Client):
                 solution = message.content.strip()
                 logger.info(f"Received CAPTCHA solution from {message.author}")
                 future.set_result(solution)
+                
+                # Get the original bot message and add reaction to it
                 try:
-                    await message.add_reaction("✅")
-                except Exception:
-                    pass
+                    channel = message.channel
+                    bot_message = await channel.fetch_message(message.reference.message_id)
+                    await bot_message.add_reaction("✅")
+                except Exception as e:
+                    logger.error(f"Failed to add reaction to bot message: {e}")
 
     async def solve(self, image_data: bytes) -> str | None:
         # Wait for bot to be ready
