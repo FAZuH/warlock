@@ -23,7 +23,7 @@ class IrsService:
             )
             return False
 
-        logger.success("Successfully navigated to the Course Plan Edit page.")
+        logger.info("Navigated to the Course Plan Edit page.")
 
         # Make a copy of courses to track which ones are found
         pending_courses = courses.copy()

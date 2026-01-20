@@ -8,6 +8,7 @@ from playwright.async_api import Page
 from playwright.async_api import Route
 
 from fazuh.warlock.config import Config
+from fazuh.warlock.error import ConfigError
 
 
 class TestManager:
@@ -40,8 +41,7 @@ class TestManager:
                 ),
             )
         else:
-            logger.error("No jadwal-html provided for IRS mock")
-            return
+            raise ConfigError("No jadwal-html provided for IRS mock")
 
         # Intercept IRS Page (WarBot/AutoFill)
         from fazuh.warlock.siak.path import Path as SiakPath

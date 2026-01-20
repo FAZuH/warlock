@@ -146,6 +146,7 @@ class Siak:
         return True
 
     async def does_need_reload(self) -> bool:
+        """If this returns false, the browser should refresh the page."""
         if await self.is_high_load_page():
             logger.error("The server is under high load. Please try again later.")
             return False
