@@ -28,32 +28,33 @@ class ScheduleUpdateTracker:
             self.cache_file.touch()
 
         self.prev_content = self.cache_file.read_text() if self.cache_file.exists() else ""
+        self.siak = Siak(self.conf)
 
     async def start(self):
         if self.conf.is_test:
             await self._run_test()
             return
 
-        self.siak = Siak(self.conf)
         await self.siak.start()
-        while True:
-            self.conf.load()  # Reload config to allow dynamic changes to .env
-            try:
-                if not await self.siak.authenticate():
-                    logger.error("Authentication failed.")
-                    continue
+        try:
+            while True:
+                self.conf.load()
+                try:
+                    if not await self.siak.authenticate():
+                        logger.error("Authentication failed.")
+                        continue
 
-                await self.run()
-            except Exception as e:
-                logger.error(f"An error occurred: {e}")
-                await self.siak.close()
-            else:
-                logger.info("Schedule update tracker completed successfully.")
-            finally:
-                logger.info(
-                    f"Waiting for the next check in {self.conf.tracker_interval} seconds..."
-                )
-                await asyncio.sleep(self.conf.tracker_interval)
+                    await self.run()
+                except Exception as e:
+                    logger.error(f"An error occurred: {e}")
+                else:
+                    logger.info("Schedule update tracker completed successfully.")
+                finally:
+                    logger.info( f"Waiting for the next check in {self.conf.tracker_interval} seconds...")
+                    await asyncio.sleep(self.conf.tracker_interval)
+        finally:
+            # Ensure we close browser if loop breaks
+            await self.siak.close()
 
     async def run(self):
         # 1. GET tracked page
@@ -61,11 +62,8 @@ class ScheduleUpdateTracker:
         if self.siak.page.url != self.conf.tracked_url:
             logger.error(f"Expected {self.conf.tracked_url}. Found {self.siak.page.url} instead.")
             return
-        if await self.siak.is_captcha_page():
-            logger.error("Captcha page detected. Please solve the captcha manually.")
-            return
         if not await self.siak.is_logged_in():
-            logger.error("Not logged in. Please check your credentials.")
+            logger.error("Not logged in. There was an issue in authenticating.")
             return
 
         # 2. Parse response

@@ -71,6 +71,7 @@ class Siak:
             logger.error("Maximum authentication retries reached.")
             return False
 
+        await self.page.wait_for_load_state()
         if await self.is_logged_in():
             return True  # Already logged in, no need to authenticate
 

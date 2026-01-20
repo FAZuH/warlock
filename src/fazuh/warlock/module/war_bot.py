@@ -20,28 +20,24 @@ class WarBot:
         # This means that the /main/CoursePlan/CoursePlanEdit page WILL NOT update until we logout, then login again
         await self.siak.start()
 
-        if self.conf.is_test:
-            logger.info("Test mode enabled. Skipping authentication.")
-        else:
-            try:
-                while True:
-                    self.conf.load()
-                    try:
-                        if not await self.siak.authenticate():
-                            logger.error("Authentication failed.")
-                            continue
+        try:
+            while True:
+                self.conf.load()
+                try:
+                    if not await self.siak.authenticate():
+                        logger.error("Authentication failed.")
+                        continue
 
-                        await self.run()
-                        await self.siak.unauthenticate()
-                    except Exception as e:
-                        logger.error(f"An error occurred: {e}")
-                    finally:
-                        # Instead of closing browser, just logout
-                        logger.info(f"Retrying in {self.conf.warbot_interval} seconds...")
-                        await asyncio.sleep(self.conf.warbot_interval)
-            finally:
-                # Ensure we close browser if loop breaks
-                await self.siak.close()
+                    await self.run()
+                    await self.siak.unauthenticate()
+                except Exception as e:
+                    logger.error(f"An error occurred: {e}")
+                finally:
+                    logger.info(f"Retrying in {self.conf.warbot_interval} seconds...")
+                    await asyncio.sleep(self.conf.warbot_interval)
+        finally:
+            # Ensure we close browser if loop breaks
+            await self.siak.close()
 
     async def run(self):
         # Pass a copy of courses to avoid modifying the original list if we retry
