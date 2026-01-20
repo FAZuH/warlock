@@ -3,7 +3,6 @@ from unittest.mock import AsyncMock
 from unittest.mock import MagicMock
 from unittest.mock import patch
 
-from bs4 import BeautifulSoup
 import pytest
 import pytest_asyncio
 

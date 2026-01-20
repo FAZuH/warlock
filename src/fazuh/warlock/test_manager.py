@@ -1,5 +1,5 @@
-import re
 from pathlib import Path
+import re
 
 from bs4 import BeautifulSoup
 from bs4 import Tag
