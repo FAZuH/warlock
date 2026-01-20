@@ -170,3 +170,4 @@ sandbox.py
 logs
 /data/latest_courses.txt
 /courses.json
+/courses.yaml
