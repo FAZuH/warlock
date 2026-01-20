@@ -15,6 +15,13 @@ from fazuh.warlock.siak.siak import Siak
 
 
 class ScheduleUpdateTracker:
+    """Monitors a specific SIAK schedule page for changes.
+
+    Periodically fetches the schedule page, compares it with the previous state,
+    and notifies via Discord webhook if any changes (added/removed/modified classes)
+    are detected.
+    """
+
     def __init__(self):
         self.conf = Config()
 
@@ -31,6 +38,10 @@ class ScheduleUpdateTracker:
         self.siak = Siak(self.conf)
 
     async def start(self):
+        """Starts the tracker loop.
+
+        Continuously monitors the schedule at the configured interval.
+        """
         if self.conf.is_test:
             await self._run_test()
             return
@@ -59,6 +70,11 @@ class ScheduleUpdateTracker:
             await self.siak.close()
 
     async def run(self):
+        """Executes a single check iteration.
+
+        Fetches the page, parses courses, compares with cache, and sends notifications
+        if changes are found.
+        """
         # 1. GET tracked page
         if self.siak.page.url != self.conf.tracked_url:
             await self.siak.page.goto(self.conf.tracked_url)
@@ -142,7 +158,15 @@ class ScheduleUpdateTracker:
         self.cache_file.write_text(curr)
 
     def _parse_courses_dict(self, content: str) -> dict[str, dict[str, list[str]]]:
-        """Parse course content into nested dict: {course_code: {course_info: str, classes: [class_details]}"""
+        """Parses the raw course content string into a structured dictionary.
+
+        Args:
+            content: The raw string content (lines of "Course: | Class1 | Class2").
+
+        Returns:
+            dict: Nested dictionary structure for easy comparison.
+                  {course_code: {info: str, classes: [str]}}
+        """
         result = {}
         for line in content.splitlines():
             if ": |" in line:
@@ -154,7 +178,17 @@ class ScheduleUpdateTracker:
         return result
 
     def _generate_detailed_diff(self, old: dict, new: dict) -> list[dict]:
-        """Generate structured diff for Discord embeds."""
+        """Generates a structured diff between old and new course data.
+
+        Identifies new courses, removed courses, and modified courses (added/removed/changed classes).
+
+        Args:
+            old: The previous course dictionary.
+            new: The current course dictionary.
+
+        Returns:
+            list[dict]: A list of change objects suitable for Discord embeds.
+        """
         changes = []
 
         # New courses
@@ -273,7 +307,14 @@ class ScheduleUpdateTracker:
         return changes
 
     async def _send_changes_to_webhook(self, webhook_url: str, changes: list[dict]):
-        """Send changes to Discord using embeds and components."""
+        """Sends the detected changes to the Discord webhook.
+
+        Uses embeds for small changes and a text file for large changes.
+
+        Args:
+            webhook_url: The Discord webhook URL.
+            changes: The list of change objects.
+        """
         period_code = self._extract_period_from_url(self.conf.tracked_url)
         period_display = self._format_period(period_code)
 

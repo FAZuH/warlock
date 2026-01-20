@@ -28,12 +28,12 @@ Strict adherence to `ruff` and `isort` configurations in `pyproject.toml` is req
 - **Check Linting:** `uv run ruff check .`
 - **Fix Linting:** `uv run ruff check --fix .`
 - **Format Code:** `uv run ruff format .`
-- **Sort Imports:** `uv run isort .` (Profile: Google, Line length: 100)
+- **Sort Imports:** `uv run isort .` (Profile: Google, Line length: 100 - per pyproject.tlml)
 
 ## 2. Code Style & Conventions
 
 ### General
-- **Python Version:** 3.12+ (Utilize modern features).
+- **Python Version:** 3.12+
 - **Line Length:** 100 characters.
 - **Indentation:** 4 spaces.
 - **Quotes:** Double quotes (`"`) preferred.

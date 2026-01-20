@@ -12,6 +12,13 @@ from fazuh.warlock.error import ConfigError
 
 
 class TestManager:
+    """Manages test environment setup and mocking.
+
+    This class is responsible for configuring the Playwright environment for testing,
+    including intercepting network requests and serving mock HTML content for
+    SIAK pages.
+    """
+
     def __init__(self, config: Config):
         self.config = config
         self.tests_dir = Path("tests")
@@ -19,6 +26,15 @@ class TestManager:
         self.template_path = self.tests_dir / "mock" / "irs_page.html"
 
     async def setup_mocks(self, page: Page):
+        """Sets up network mocks for the Playwright page.
+
+        Intercepts requests to SIAK URLs and serves mock content based on
+        local HTML templates and configuration. This allows testing without
+        hitting the actual SIAK servers.
+
+        Args:
+            page: The Playwright Page object to configure.
+        """
         if not self.config.is_test:
             return
 
@@ -67,6 +83,14 @@ class TestManager:
         )
 
     def _generate_irs_html(self) -> str:
+        """Generates a mock IRS page HTML.
+
+        Constructs a mock IRS (Course Plan) page by injecting course data
+        parsed from the schedule (jadwal) HTML into a template.
+
+        Returns:
+            str: The generated HTML content for the IRS page.
+        """
         if not self.config.jadwal_html_path:
             return ""
 
@@ -200,6 +224,15 @@ class TestManager:
         return str(template_soup)
 
     def _parse_jadwal(self, soup: BeautifulSoup) -> dict:
+        """Parses the schedule (jadwal) HTML to extract course information.
+
+        Args:
+            soup: The BeautifulSoup object of the schedule page.
+
+        Returns:
+            dict: A dictionary mapping course names to lists of class details
+                  (name, time, room, lecturer).
+        """
         courses = {}
         # Find headers
         for hdr in soup.find_all("th", class_=("sub", "border2", "pad2")):

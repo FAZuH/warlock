@@ -13,12 +13,23 @@ from fazuh.warlock.siak.path import Path
 
 
 class Siak:
+    """Manages the browser session and interaction with SIAK NG.
+
+    Handles browser initialization, authentication, navigation, and common
+    page checks. It uses Playwright for automation and supports both
+    headless and headed modes.
+    """
+
     def __init__(self, config: Config, auth_max_retries: int = 5):
         self.config = config
         self.auth_max_retries = auth_max_retries
 
     async def start(self):
-        """Start the browser"""
+        """Initializes and starts the Playwright browser session.
+
+        Launches the browser based on configuration (Chromium, Firefox, WebKit, or Brave),
+        creates a new page, and sets up mocks if in test mode.
+        """
         self.playwright = await async_playwright().start()
 
         match self.config.browser:
@@ -45,7 +56,11 @@ class Siak:
             await TestManager(self.config).setup_mocks(self.page)
 
     async def close(self):
-        """Close the browser"""
+        """Closes the browser and stops the Playwright instance.
+
+        Safely handles cases where the browser or playwright instance might not
+        have been fully initialized.
+        """
         # NOTE: self.browser and self.playwright is created at self.start(), not self.__init__(),
         # thus there is no guarantee it is initialized yet.
         if hasattr(self, "browser"):
@@ -54,15 +69,35 @@ class Siak:
             await self.playwright.stop()
 
     async def restart(self):
-        """Close, and restart the browser"""
+        """Restarts the browser session.
+
+        Closes the current session and starts a new one. Useful for clearing
+        cookies/session state or recovering from errors.
+        """
         await self.close()
         await self.start()
 
     async def reload(self):
-        """Refresh the current page"""
+        """Refreshes the current page."""
         await self.page.reload()
 
     async def authenticate(self, retries: int = 0) -> bool:
+        """Performs the login process for SIAK NG.
+
+        Handles the entire authentication flow, including:
+        - Checking if already logged in.
+        - Navigating to the login page.
+        - Handling CAPTCHA challenges (pre and post login).
+        - Filling credentials.
+        - Selecting role if needed.
+        - Handling server load/error pages.
+
+        Args:
+            retries: Current retry count (used for recursion).
+
+        Returns:
+            bool: True if authentication is successful, False otherwise.
+        """
         if self.config.is_test:
             logger.info("Test mode enabled. Skipping authentication.")
             return True
@@ -133,20 +168,30 @@ class Siak:
         return True
 
     async def unauthenticate(self):
-        """Logs out from the application."""
+        """Logs out from the application by navigating to the logout URL."""
         if hasattr(self, "page"):
             await self.page.goto(Path.LOGOUT)
             logger.info("Logged out successfully.")
 
     async def does_need_restart(self) -> bool:
-        """If this returns false, the browser should restart to clear sessions."""
+        """Checks if the browser needs to be restarted.
+
+        Returns:
+            bool: False if the page indicates a session rejection requiring a restart,
+                  True otherwise.
+        """
         if await self.is_rejected_page():
             logger.error("The requested URL was rejected.")
             return False
         return True
 
     async def does_need_reload(self) -> bool:
-        """If this returns false, the browser should refresh the page."""
+        """Checks if the page needs to be reloaded.
+
+        Returns:
+            bool: False if the page indicates high load or inaccessibility,
+                  True otherwise.
+        """
         if await self.is_high_load_page():
             logger.error("The server is under high load. Please try again later.")
             return False
@@ -156,7 +201,14 @@ class Siak:
         return True
 
     async def handle_role_selection(self) -> bool:
-        """Handles role selection if no role is selected."""
+        """Ensures a user role is selected.
+
+        Checks if a role is already selected. If not, navigates to the change role
+        page and verifies selection.
+
+        Returns:
+            bool: True if a role is selected, False otherwise.
+        """
         if await self.is_role_selected():
             return True
 
@@ -170,7 +222,18 @@ class Siak:
         return True
 
     async def handle_captcha(self) -> bool:
-        """Extracts CAPTCHA, notifies admin, and gets solution from CLI."""
+        """Detects and handles CAPTCHA challenges.
+
+        If a CAPTCHA is present:
+        1. Extracts the CAPTCHA image.
+        2. Attempts to solve it via the configured Discord bot.
+        3. If headless and no bot, raises an error.
+        4. If headed, waits for manual solution.
+        5. Submits the solution.
+
+        Returns:
+            bool: True if CAPTCHA was handled (or not present), False if failed.
+        """
         await self.page.wait_for_load_state()
         if not await self.is_captcha_page():
             return False
@@ -231,7 +294,11 @@ class Siak:
         return True
 
     async def is_not_registration_period(self, content: str | None = None) -> bool:
-        """Check if the current period is not a registration period."""
+        """Checks if the page indicates it is not a registration period.
+
+        Args:
+            content: Optional page content to check against. If None, fetches current content.
+        """
         ret = await self._check_page_content(
             ["Anda tidak dapat mengisi IRS karena periode registrasi akademik belum dimulai"],
             content,
@@ -239,21 +306,37 @@ class Siak:
         return ret
 
     async def is_login_page(self, content: str | None = None) -> bool:
-        """Check if current page is the login page."""
+        """Checks if the current page is the login page.
+
+        Args:
+            content: Optional page content to check against.
+        """
         # return Path.AUTHENTICATION in self.page.url
         # NOTE: `self.page.url` be in `Path.AUTHENTICATION`, but the page shows "The request URL was rejected"
         return await self._check_page_content(["Waspada terhadap pencurian password!"], content)
 
     async def is_logged_in_page(self, content: str | None = None) -> bool:
-        """Check if the user is logged in."""
+        """Checks if the user is successfully logged in.
+
+        Args:
+            content: Optional page content to check against.
+        """
         return await self._check_page_content(["Logout Counter"], content)
 
     async def is_role_selected(self, content: str | None = None) -> bool:
-        """Check if a role is selected."""
+        """Checks if a user role is currently selected.
+
+        Args:
+            content: Optional page content to check against.
+        """
         return not await self._check_page_content(["No role selected"], content)
 
     async def is_captcha_page(self, content: str | None = None) -> bool:
-        """Check if the current page is a CAPTCHA page."""
+        """Checks if the current page is a CAPTCHA challenge page.
+
+        Args:
+            content: Optional page content to check against.
+        """
         keywords = [
             "This question is for testing whether you are a human visitor",
             "What code is in the image?",
@@ -262,11 +345,19 @@ class Siak:
         return await self._check_page_content(keywords, content)
 
     async def is_rejected_page(self, content: str | None = None) -> bool:
-        """Check if the current page is a rejected URL page."""
+        """Checks if the request was rejected by the server.
+
+        Args:
+            content: Optional page content to check against.
+        """
         return await self._check_page_content(["The requested URL was rejected"], content)
 
     async def is_high_load_page(self, content: str | None = None) -> bool:
-        """Check if the current page indicates high server load."""
+        """Checks if the server is reporting high load.
+
+        Args:
+            content: Optional page content to check against.
+        """
         # Maaf, server SIAKNG sedang mengalami load tinggi dan belum dapat melayani request Anda saat ini.
         # Silahkan mencoba beberapa saat lagi.
         return await self._check_page_content(
@@ -274,13 +365,25 @@ class Siak:
         )
 
     async def is_inaccessible_page(self, content: str | None = None) -> bool:
-        """Check if the current page is inaccessible."""
+        """Checks if the page is temporarily inaccessible.
+
+        Args:
+            content: Optional page content to check against.
+        """
         return await self._check_page_content(["Silakan mencoba beberapa saat lagi."], content)
 
     async def _check_page_content(
         self, keywords: Iterable[str], content: str | None = None
     ) -> bool:
-        """Check if page contents contains a specific string"""
+        """Checks if any of the keywords exist in the page content.
+
+        Args:
+            keywords: List of strings to search for.
+            content: Optional content to search in. If None, fetches current page content.
+
+        Returns:
+            bool: True if any keyword is found, False otherwise.
+        """
         if content is None:
             if not hasattr(self, "page"):
                 return False
@@ -289,11 +392,17 @@ class Siak:
 
     @property
     async def content(self) -> str:
-        """Get the current page content."""
+        """Retrieves the current page HTML content."""
         return await self.page.content()
 
     async def _notify_admin_for_captcha(self, image_data: bytes):
-        """Sends the CAPTCHA image to the admin webhook."""
+        """Sends the CAPTCHA image to the configured Discord webhook.
+
+        Used as a fallback or notification mechanism when manual solving is required.
+
+        Args:
+            image_data: Raw bytes of the CAPTCHA image.
+        """
         if not self.config.auth_discord_webhook_url:
             return
 

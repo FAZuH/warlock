@@ -10,6 +10,12 @@ from fazuh.warlock.siak.siak import Siak
 
 
 class AutoFill:
+    """Automated tool for one-time IRS filling.
+
+    Unlike WarBot, this is designed for a single, user-initiated fill operation.
+    It supports manual authentication in the browser window.
+    """
+
     def __init__(self):
         self.conf = Config()
         self.conf.load()
@@ -18,6 +24,11 @@ class AutoFill:
         self.courses = load_courses()
 
     async def start(self):
+        """Starts the AutoFill process.
+
+        Launches the browser, handles authentication (manual or skipped in test),
+        and proceeds to fill the IRS.
+        """
         try:
             await self.siak.start()
 
@@ -33,6 +44,7 @@ class AutoFill:
             await self.siak.close()
 
     async def _run(self):
+        """Executes the IRS filling logic."""
         logger.info("Proceeding to fill IRS...")
         if not await self.irs_service.fill_irs(self.courses):
             return
@@ -46,6 +58,11 @@ class AutoFill:
             await asyncio.sleep(1)
 
     async def _auth(self):
+        """Handles the authentication process.
+
+        Navigates to the login page and waits for the user to manually log in
+        and select a role.
+        """
         logger.info("Navigating to authentication page...")
         await self.siak.page.goto(Path.AUTHENTICATION)
 

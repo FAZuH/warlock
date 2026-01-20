@@ -1,3 +1,9 @@
+"""Main entry point for the Warlock application.
+
+Handles command-line argument parsing and dispatches execution to the
+requested module (track, war, or autofill).
+"""
+
 import argparse
 import asyncio
 
@@ -7,6 +13,11 @@ from fazuh.warlock.config import Config
 
 
 async def main():
+    """Async entry point.
+
+    Parses arguments, initializes configuration and logging, sets up the
+    Discord bot, and runs the selected module.
+    """
     parser = argparse.ArgumentParser(description="Warlock Bot")
     parser.add_argument(
         "module",
@@ -56,6 +67,7 @@ async def main():
 
 
 def main_sync():
+    """Synchronous wrapper for the async main function."""
     asyncio.run(main())
 
 

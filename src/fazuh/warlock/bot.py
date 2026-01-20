@@ -9,6 +9,13 @@ from fazuh.warlock.config import Config
 
 
 class CaptchaBot(discord.Client):
+    """Discord bot for handling CAPTCHA challenges.
+
+    This bot sends CAPTCHA images to a specified Discord channel and waits for
+    a user to reply with the solution. It facilitates manual CAPTCHA solving
+    for the automated browser session.
+    """
+
     def __init__(self, channel_id: int):
         intents = discord.Intents.default()
         intents.messages = True
@@ -20,10 +27,16 @@ class CaptchaBot(discord.Client):
         self._ready_event = asyncio.Event()
 
     async def on_ready(self):
+        """Called when the bot has successfully connected to Discord."""
         logger.info(f"CaptchaBot logged in as {self.user}")
         self._ready_event.set()
 
     async def on_message(self, message: discord.Message):
+        """Handles incoming messages.
+
+        Checks if a message is a reply to a pending CAPTCHA request. If so,
+        it extracts the solution and resolves the corresponding future.
+        """
         if message.author == self.user:
             return
 
@@ -44,6 +57,14 @@ class CaptchaBot(discord.Client):
                     logger.error(f"Failed to add reaction to bot message: {e}")
 
     async def solve(self, image_data: bytes) -> str | None:
+        """Sends a CAPTCHA image to Discord and waits for a solution.
+
+        Args:
+            image_data: The raw bytes of the CAPTCHA image.
+
+        Returns:
+            str | None: The solution string provided by the user, or None if failed.
+        """
         # Wait for bot to be ready
         await self._ready_event.wait()
 
@@ -91,7 +112,11 @@ _initialization_attempted: bool = False
 
 
 def init_discord_bot():
-    """Initializes the Discord bot if config is valid."""
+    """Initializes the Discord bot if config is valid.
+
+    Reads configuration from the global Config instance and starts the bot
+    in a background task if the token and channel ID are present.
+    """
     global _bot, _bot_task, _initialization_attempted
 
     if _initialization_attempted:
@@ -124,6 +149,16 @@ def init_discord_bot():
 
 
 async def get_captcha_solution(image_data: bytes) -> str | None:
+    """Request a CAPTCHA solution via the Discord bot.
+
+    Ensures the bot is initialized before attempting to solve.
+
+    Args:
+        image_data: The raw bytes of the CAPTCHA image.
+
+    Returns:
+        str | None: The solution string, or None if the bot is not available.
+    """
     # Ensure init was attempted
     if not _initialization_attempted:
         init_discord_bot()

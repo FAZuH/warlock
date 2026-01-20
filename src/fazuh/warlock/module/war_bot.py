@@ -9,6 +9,12 @@ from fazuh.warlock.siak.siak import Siak
 
 
 class WarBot:
+    """Automated bot for aggressive IRS filling (War IRS).
+
+    Continuously attempts to fill the IRS form at a specified interval.
+    Designed for high-contention registration periods.
+    """
+
     def __init__(self):
         self.conf = Config()
         self.conf.load()
@@ -17,6 +23,11 @@ class WarBot:
         self.courses = load_courses()
 
     async def start(self):
+        """Starts the WarBot execution loop.
+
+        Continuously authenticates and attempts to fill the IRS.
+        If authentication fails or the session expires, it retries.
+        """
         # NOTE: Don't reuse sessions. is_not_registration_period() will always return True until we re-authenticate.
         # This means that the /main/CoursePlan/CoursePlanEdit page WILL NOT update until we logout, then login again
         try:
@@ -42,6 +53,11 @@ class WarBot:
             await self.siak.close()
 
     async def _run(self):
+        """Executes a single IRS filling attempt.
+
+        Returns:
+            bool: False if filling failed (e.g. registration closed), True otherwise.
+        """
         if await self.irs_service.fill_irs(self.courses) is False:
             return False
 

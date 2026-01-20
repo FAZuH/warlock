@@ -1,3 +1,10 @@
+"""Custom exception hierarchy for the Warlock application.
+
+This module defines the base exception class and specific error types
+used throughout the application for error handling.
+"""
+
+
 class WarlockError(Exception): ...
 
 

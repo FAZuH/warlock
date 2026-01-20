@@ -7,6 +7,13 @@ import requests
 
 
 class Config:
+    """Application configuration manager.
+
+    Handles loading and validation of environment variables and configuration settings
+    for the Warlock application, including credentials, browser settings, and
+    Discord integration.
+    """
+
     _instance: Self | None = None
     is_test: bool
     jadwal_html_path: str | None

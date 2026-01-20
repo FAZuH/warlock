@@ -1,3 +1,9 @@
+"""Data models for the Warlock application.
+
+This module defines the data structures used to represent course targets
+and other domain objects, along with utilities for loading them from configuration.
+"""
+
 from dataclasses import dataclass
 import json
 from pathlib import Path
@@ -9,6 +15,16 @@ import yaml
 
 @dataclass
 class CourseTarget:
+    """Represents a target course for enrollment or monitoring.
+
+    Attributes:
+        course: The name of the course (partial match).
+        prof: The name of the professor (partial match).
+        code: The specific course code (e.g., "CS123").
+        time: The schedule time string.
+        name: The full name of the course (used for display/logging).
+    """
+
     course: Optional[str] = None
     prof: Optional[str] = None
     code: Optional[str] = None
