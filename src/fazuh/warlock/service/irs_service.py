@@ -27,6 +27,9 @@ class IrsService:
 
         rows = await siak.page.query_selector_all("tr")
         for row in rows:
+            if not pending_courses:
+                break
+
             course_element = await row.query_selector("label")
             prof_element = await row.query_selector("td:nth-child(9)")
             time_element = await row.query_selector("td:nth-child(7)")
@@ -51,6 +54,8 @@ class IrsService:
 
                     if target in pending_courses:
                         pending_courses.remove(target)
+                        if not pending_courses:
+                            break
                     break
 
         logger.info("Finished selecting courses")
