@@ -21,20 +21,23 @@ class AutoFill:
         await self.siak.start()
 
         try:
-            logger.info("Navigating to authentication page...")
-            await self.siak.page.goto(Path.AUTHENTICATION)
+            if self.conf.is_test:
+                logger.info("Test mode enabled. Skipping authentication.")
+            else:
+                logger.info("Navigating to authentication page...")
+                await self.siak.page.goto(Path.AUTHENTICATION)
 
-            logger.info("Please authenticate manually in the browser window.")
-            logger.info("Waiting for login and role selection...")
+                logger.info("Please authenticate manually in the browser window.")
+                logger.info("Waiting for login and role selection...")
 
-            while True:
-                content = await self.siak.content
-                if await self.siak.is_logged_in(content) and await self.siak.is_role_selected(
-                    content
-                ):
-                    logger.success("Login and role selection detected!")
-                    break
-                await asyncio.sleep(1)
+                while True:
+                    content = await self.siak.content
+                    if await self.siak.is_logged_in(content) and await self.siak.is_role_selected(
+                        content
+                    ):
+                        logger.success("Login and role selection detected!")
+                        break
+                    await asyncio.sleep(1)
 
             logger.info("Proceeding to fill IRS...")
             if not await self.irs_service.fill_irs(self.siak, self.courses.copy()):

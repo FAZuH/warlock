@@ -8,6 +8,8 @@ import requests
 
 class Config:
     _instance: Self | None = None
+    is_test: bool
+    jadwal_html_path: str | None
 
     def load(self):
         """Load environment variables
@@ -61,6 +63,11 @@ class Config:
     def __new__(cls, *args, **kwargs):
         if cls._instance is None:
             cls._instance = super(Config, cls).__new__(cls)
+
+            # Test mode defaults
+            cls._instance.is_test = False
+            cls._instance.jadwal_html_path = None
+
             cls._instance.load()
         return cls._instance
 

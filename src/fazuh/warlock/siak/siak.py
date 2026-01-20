@@ -39,6 +39,11 @@ class Siak:
         self.browser = await browser.launch(**launch_kwargs)
         self.page = await self.browser.new_page()
 
+        if self.config.is_test:
+            from fazuh.warlock.test_manager import TestManager
+
+            await TestManager(self.config).setup_mocks(self.page)
+
     async def close(self):
         """Close the browser"""
         # NOTE: self.browser and self.playwright is created at self.start(), not self.__init__(),
