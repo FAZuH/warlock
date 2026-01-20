@@ -58,7 +58,15 @@ class Siak:
         await self.close()
         await self.start()
 
+    async def reload(self):
+        """Refresh the current page"""
+        await self.page.reload()
+
     async def authenticate(self, retries: int = 0) -> bool:
+        if self.config.is_test:
+            logger.info("Test mode enabled. Skipping authentication.")
+            return True
+
         if retries > self.auth_max_retries:
             logger.error("Maximum authentication retries reached.")
             return False
@@ -109,8 +117,12 @@ class Siak:
         if not await self.handle_role_selection():
             return False
 
-        await self.page.wait_for_load_state()
         if not await self.does_need_restart():
+            await self.restart()
+            return False
+
+        if not await self.does_need_reload():
+            await self.reload()
             return False
 
         logger.info("Authentication successful.")
@@ -127,6 +139,9 @@ class Siak:
         if await self.is_rejected_page():
             logger.error("The requested URL was rejected.")
             return False
+        return True
+
+    async def does_need_reload(self) -> bool:
         if await self.is_high_load_page():
             logger.error("The server is under high load. Please try again later.")
             return False

@@ -33,7 +33,10 @@ class ScheduleUpdateTracker:
         while True:
             self.conf.load()  # Reload config to allow dynamic changes to .env
             try:
-                await self.siak.authenticate()
+                if not await self.siak.authenticate():
+                    logger.error("Authentication failed.")
+                    continue
+
                 await self.run()
             except Exception as e:
                 logger.error(f"An error occurred: {e}")

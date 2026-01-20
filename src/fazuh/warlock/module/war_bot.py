@@ -28,8 +28,7 @@ class WarBot:
                     self.conf.load()
                     try:
                         if not await self.siak.authenticate():
-                            logger.error("Authentication failed. Is the server down?")
-                            await self.siak.restart()
+                            logger.error("Authentication failed.")
                             continue
 
                         await self.run()
