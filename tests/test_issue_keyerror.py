@@ -1,5 +1,9 @@
+from unittest.mock import AsyncMock
+from unittest.mock import MagicMock
+from unittest.mock import patch
+
 import pytest
-from unittest.mock import MagicMock, patch
+
 from fazuh.warlock.module.schedule_update_tracker import ScheduleUpdateTracker
 
 
@@ -40,26 +44,35 @@ async def test_webhook_large_payload_chunking():
                 }
             )
 
-        # Mock requests.post
-        with patch("requests.post") as mock_post:
-            # Setup response for the first call (thread creation)
-            mock_response = MagicMock()
-            mock_response.json.return_value = {"id": "123456789"}
-            mock_response.raise_for_status.return_value = None
-            mock_post.return_value = mock_response
+        # Mock discord.Webhook.from_url
+        with patch("discord.Webhook.from_url") as mock_from_url:
+            mock_webhook = MagicMock()
+            mock_from_url.return_value = mock_webhook
+
+            # Mock send method
+            mock_send = AsyncMock()
+            mock_webhook.send = mock_send
+
+            # Setup return value for the first call (thread creation)
+            mock_message = MagicMock()
+            mock_message.id = 123456789
+            mock_send.return_value = mock_message
 
             await tracker._send_changes_to_webhook("http://fake.url", changes)
 
             # Verify calls
-            assert mock_post.call_count == 2
+            assert mock_send.call_count == 2
 
-            # First call: Create thread
-            args1, kwargs1 = mock_post.call_args_list[0]
-            assert kwargs1["params"] == {"wait": "true"}
-            assert "thread_name" in kwargs1["json"]
-            assert len(kwargs1["json"]["embeds"]) == 10
+            # First call: First chunk with content
+            args1, kwargs1 = mock_send.call_args_list[0]
+            assert kwargs1["wait"] is True
+            assert "content" in kwargs1
+            assert len(kwargs1["embeds"]) == 10
+            assert "thread_name" not in kwargs1
 
-            # Second call: Post to thread
-            args2, kwargs2 = mock_post.call_args_list[1]
-            assert kwargs2["params"] == {"thread_id": "123456789"}
-            assert len(kwargs2["json"]["embeds"]) == 5
+            # Second call: Second chunk without content
+            args2, kwargs2 = mock_send.call_args_list[1]
+            assert kwargs2["wait"] is True
+            assert "content" not in kwargs2
+            assert len(kwargs2["embeds"]) == 5
+            assert "thread" not in kwargs2
