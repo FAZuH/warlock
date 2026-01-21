@@ -26,6 +26,7 @@ This project uses **[uv](https://docs.astral.sh/uv/)** for dependency management
 - **Manual Tests (`tests/manual`):** These tests require manual interaction or specific data files. Run with `--run-manual`.
   - Example: `uv run pytest tests/manual/test_warbot_manual.py --run-manual --schedule-html "path/to/schedule.html"`
 - **Webhook Tests (`tests/webhook`):** Tests for Discord webhook integration.
+- **Full Tests**: Run ALL tests using `uv run pytest --run-webhook --run-manual --schedule-html="data/Jadwal Kelas Mata Kuliah - SIAK NG.html" -s`. This is the recommended way of testing to make sure nothing breaks
 
 ### Linting & Formatting
 Strict adherence to `ruff` and `isort` configurations in `pyproject.toml` is required.

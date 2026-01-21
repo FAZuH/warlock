@@ -46,37 +46,43 @@ class IrsService:
         # Make a copy of courses to track which ones are found
         pending_courses = courses.copy()
 
-        rows = await self.siak.page.query_selector_all("tr")
-        for row in rows:
+        # Extract all row data in one go to avoid N+1 round-trips
+        rows_data = await self.siak.page.evaluate("""
+            () => {
+                const rows = Array.from(document.querySelectorAll('tr'));
+                return rows.map(row => {
+                    const courseEl = row.querySelector('label');
+                    const profEl = row.querySelector('td:nth-child(9)');
+                    const timeEl = row.querySelector('td:nth-child(7)');
+                    const radioEl = row.querySelector('input[type="radio"]');
+                    
+                    if (!courseEl || !profEl || !timeEl || !radioEl) {
+                        return null;
+                    }
+                    
+                    return {
+                        name: courseEl.innerText,
+                        prof: profEl.innerText,
+                        time: timeEl.innerText,
+                        code: radioEl.value
+                    };
+                }).filter(item => item !== null);
+            }
+        """)
+
+        for row_data in rows_data:
             if not pending_courses:
                 break
 
-            course_element = await row.query_selector("label")
-            prof_element = await row.query_selector("td:nth-child(9)")
-            time_element = await row.query_selector("td:nth-child(7)")
-            radio_element = await row.query_selector('input[type="radio"]')
-
-            if not course_element or not prof_element or not time_element or not radio_element:
-                continue
-
-            row_data = {
-                "name": await course_element.inner_text(),
-                "prof": await prof_element.inner_text(),
-                "time": await time_element.inner_text(),
-                "code": await radio_element.get_attribute("value") or "",
-            }
-
             # Iterate over a copy of the list so we can modify pending_courses safely
-            # Note: We iterate over list(pending_courses) copy, but remove from original pending_courses
             for target in list(pending_courses):
                 if target.matches(row_data):
-                    await radio_element.check()
+                    # Check the radio button using its value
+                    await self.siak.page.check(f'input[type="radio"][value="{row_data["code"]}"]')
                     logger.info(f"Selected: {target} -> {row_data['name']}")
 
                     if target in pending_courses:
                         pending_courses.remove(target)
-                        if not pending_courses:
-                            break
                     break
 
         logger.info("Finished selecting courses")

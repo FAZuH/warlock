@@ -30,54 +30,33 @@ async def irs_html():
 async def test_fill_irs_integration(mock_siak, irs_html):
     # Setup mock page content
     mock_siak.page.content = AsyncMock(return_value=irs_html)
+    mock_siak.page.check = AsyncMock()
 
     from bs4 import BeautifulSoup
 
     soup = BeautifulSoup(irs_html, "html.parser")
     rows = soup.find_all("tr")
 
-    mock_rows = []
-    mock_query_results = {}
+    mock_data = []
 
-    for i, row in enumerate(rows):
-        m_row = MagicMock()
-        m_row_id = i
+    for row in rows:
+        course_el = row.find("label")
+        prof_els = row.find_all("td")
+        radio_el = row.find("input", type="radio")
 
-        async def mq(sel, r=row, rid=m_row_id):
-            key = (rid, sel)
-            if key in mock_query_results:
-                return mock_query_results[key]
+        if not course_el or len(prof_els) < 9 or not radio_el:
+            continue
 
-            res = None
-            if sel == "label":
-                lab = r.find("label")
-                if lab:
-                    res = MagicMock()
-                    res.inner_text = AsyncMock(return_value=lab.get_text(strip=True))
-            elif sel == "td:nth-child(9)":
-                tds = r.find_all("td")
-                if len(tds) >= 9:
-                    res = MagicMock()
-                    res.inner_text = AsyncMock(return_value=tds[8].get_text(strip=True))
-            elif sel == "td:nth-child(7)":
-                tds = r.find_all("td")
-                if len(tds) >= 7:
-                    res = MagicMock()
-                    res.inner_text = AsyncMock(return_value=tds[6].get_text(strip=True))
-            elif sel == 'input[type="radio"]':
-                inp = r.find("input", type="radio")
-                if inp:
-                    res = MagicMock()
-                    res.get_attribute = AsyncMock(return_value=inp.get("value"))
-                    res.check = AsyncMock()
+        mock_data.append(
+            {
+                "name": course_el.get_text(strip=True),
+                "prof": prof_els[8].get_text(strip=True),
+                "time": prof_els[6].get_text(strip=True),
+                "code": radio_el.get("value"),
+            }
+        )
 
-            mock_query_results[key] = res
-            return res
-
-        m_row.query_selector = AsyncMock(side_effect=mq)
-        mock_rows.append(m_row)
-
-    mock_siak.page.query_selector_all = AsyncMock(return_value=mock_rows)
+    mock_siak.page.evaluate = AsyncMock(return_value=mock_data)
 
     service = IrsService(mock_siak)
 
@@ -90,8 +69,4 @@ async def test_fill_irs_integration(mock_siak, irs_html):
     success = await service.fill_irs(targets)
 
     assert success is True
-
-    checked_count = sum(
-        1 for res in mock_query_results.values() if hasattr(res, "check") and res.check.called
-    )
-    assert checked_count == 3
+    assert mock_siak.page.check.call_count == 3
