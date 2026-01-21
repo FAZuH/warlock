@@ -1,5 +1,6 @@
 from pathlib import Path
 import re
+from typing import Optional, Union
 
 from bs4 import BeautifulSoup
 from bs4 import Tag
@@ -7,11 +8,8 @@ from loguru import logger
 from playwright.async_api import Page
 from playwright.async_api import Route
 
-from fazuh.warlock.config import Config
-from fazuh.warlock.error import ConfigError
 
-
-class TestManager:
+class MockManager:
     """Manages test environment setup and mocking.
 
     This class is responsible for configuring the Playwright environment for testing,
@@ -19,8 +17,9 @@ class TestManager:
     SIAK pages.
     """
 
-    def __init__(self, config: Config):
-        self.config = config
+    def __init__(self, schedule_html_path: Union[str, Path], tracked_url: Optional[str] = None):
+        self.schedule_html_path = Path(schedule_html_path)
+        self.tracked_url = tracked_url
         self.tests_dir = Path("tests")
         # Ensure we use absolute path relative to cwd if needed, or rely on cwd being project root
         self.template_path = self.tests_dir / "mock" / "irs_page.html"
@@ -35,33 +34,24 @@ class TestManager:
         Args:
             page: The Playwright Page object to configure.
         """
-        if not self.config.is_test:
-            return
-
         logger.info("Setting up mocks...")
 
         # Intercept Tracked URL (Jadwal)
-        if self.config.jadwal_html_path:
-            jadwal_path = Path(self.config.jadwal_html_path)
-            if not jadwal_path.exists():
-                logger.error(f"Jadwal HTML not found at {jadwal_path}")
-                return
-
-            jadwal_content = jadwal_path.read_text(encoding="utf-8", errors="ignore")
+        if self.schedule_html_path.exists():
+            jadwal_content = self.schedule_html_path.read_text(encoding="utf-8", errors="ignore")
 
             # Mock the tracked URL (for ScheduleUpdateTracker)
-            await page.route(
-                self.config.tracked_url,
-                lambda route: route.fulfill(
-                    status=200, content_type="text/html", body=jadwal_content
-                ),
-            )
+            if self.tracked_url:
+                await page.route(
+                    self.tracked_url,
+                    lambda route: route.fulfill(
+                        status=200, content_type="text/html", body=jadwal_content
+                    ),
+                )
         else:
-            raise ConfigError("No jadwal-html provided for IRS mock")
+            logger.error(f"Jadwal HTML not found at {self.schedule_html_path}")
 
         # Intercept IRS Page (WarBot/AutoFill)
-        from fazuh.warlock.siak.path import Path as SiakPath
-
         async def handle_irs(route: Route):
             try:
                 html = self._generate_irs_html()
@@ -70,7 +60,8 @@ class TestManager:
                 logger.error(f"Failed to generate mock IRS: {e}")
                 await route.continue_()
 
-        await page.route(SiakPath.COURSE_PLAN_EDIT, handle_irs)
+        # Use glob pattern instead of importing SiakPath to avoid dependency issues
+        await page.route("**/CoursePlan/CoursePlanEdit", handle_irs)
 
         # Mock submission
         await page.route(
@@ -91,20 +82,24 @@ class TestManager:
         Returns:
             str: The generated HTML content for the IRS page.
         """
-        if not self.config.jadwal_html_path:
+        if not self.schedule_html_path.exists():
             return ""
 
-        jadwal_path = Path(self.config.jadwal_html_path)
         jadwal_soup = BeautifulSoup(
-            jadwal_path.read_text(encoding="utf-8", errors="ignore"), "html.parser"
+            self.schedule_html_path.read_text(encoding="utf-8", errors="ignore"), "html.parser"
         )
+
+        if not self.template_path.exists():
+            logger.error(f"Template not found at {self.template_path}")
+            return ""
+
         template_soup = BeautifulSoup(
             self.template_path.read_text(encoding="utf-8", errors="ignore"), "html.parser"
         )
 
         target_table = None
         for table in template_soup.find_all("table", class_="box"):
-            if table.find("th", string=re.compile("Mata Kuliah")):
+            if isinstance(table, Tag) and table.find("th", string=re.compile("Mata Kuliah")):
                 target_table = table
                 break
 
@@ -112,13 +107,17 @@ class TestManager:
             logger.error("Could not find target table in IRS template")
             return str(template_soup)
 
-        tbody = target_table.find("tbody") if target_table.find("tbody") else target_table
+        tbody = target_table.find("tbody")
+        if not tbody:
+            tbody = target_table
+
+        if not isinstance(tbody, Tag):
+            return str(template_soup)
 
         # Keep the header row(s)
         rows_to_keep = []
         for row in tbody.find_all("tr", recursive=False):
-            # We assume the main header row contains "Mata Kuliah"
-            if row.find("th", string=re.compile("Mata Kuliah")):
+            if isinstance(row, Tag) and row.find("th", string=re.compile("Mata Kuliah")):
                 rows_to_keep.append(row)
 
         tbody.clear()
@@ -236,7 +235,7 @@ class TestManager:
         courses = {}
         # Find headers
         for hdr in soup.find_all("th", class_=("sub", "border2", "pad2")):
-            if hdr.parent is None:
+            if not isinstance(hdr, Tag) or hdr.parent is None:
                 continue
 
             course_line = hdr.get_text(strip=True)

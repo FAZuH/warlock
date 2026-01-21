@@ -26,17 +26,11 @@ class AutoFill:
     async def start(self):
         """Starts the AutoFill process.
 
-        Launches the browser, handles authentication (manual or skipped in test),
-        and proceeds to fill the IRS.
+        Launches the browser, handles authentication, and proceeds to fill the IRS.
         """
         try:
             await self.siak.start()
-
-            if self.conf.is_test:
-                logger.info("Test mode enabled. Skipping authentication.")
-            else:
-                await self._auth()
-
+            await self._auth()
             await self._run()
         except Exception as e:
             logger.error(f"An error occurred: {e}")

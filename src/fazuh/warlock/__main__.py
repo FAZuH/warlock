@@ -24,21 +24,7 @@ async def main():
         choices=["track", "war", "autofill"],
         help="Module to run (track, war, or autofill).",
     )
-    parser.add_argument(
-        "--test",
-        action="store_true",
-        help="Enable test mode with mocking",
-    )
-    parser.add_argument(
-        "--jadwal-html",
-        type=str,
-        help="Path to Jadwal HTML for mocking",
-    )
     args = parser.parse_args()
-
-    conf = Config()
-    conf.is_test = args.test
-    conf.jadwal_html_path = args.jadwal_html
 
     logger.add("log/{time}.log", rotation="1 day")
 

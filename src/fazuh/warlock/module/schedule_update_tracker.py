@@ -1,8 +1,6 @@
 import asyncio
-from datetime import datetime
 from pathlib import Path
 from time import time
-from typing import Any
 
 import aiohttp
 from bs4 import BeautifulSoup
