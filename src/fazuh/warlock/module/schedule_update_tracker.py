@@ -363,7 +363,6 @@ class ScheduleUpdateTracker:
 
             diff_file = io.BytesIO("\n".join(text_content).encode("utf-8"))
 
-            data = base_data.copy()
             data["content"] += "﻿\n\n*(Terlalu banyak perubahan, lihat file)*"
             files = {"file": (filename, diff_file, "text/plain")}
 
