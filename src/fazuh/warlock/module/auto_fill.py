@@ -32,6 +32,10 @@ class AutoFill:
             await self.siak.start()
             await self._auth()
             await self._run()
+
+            # Keep browser open
+            while True:
+                await asyncio.sleep(1)
         except Exception as e:
             logger.error(f"An error occurred: {e}")
         finally:
@@ -47,9 +51,6 @@ class AutoFill:
 
         logger.success("AutoFill completed successfully.")
         logger.info("Script finished. Press Ctrl+C to exit (including the browser).")
-        # Keep browser open
-        while True:
-            await asyncio.sleep(1)
 
     async def _auth(self):
         """Handles the authentication process.

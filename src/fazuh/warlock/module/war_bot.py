@@ -40,7 +40,11 @@ class WarBot:
                         logger.error("Authentication failed.")
                         continue
 
-                    await self._run()
+                    if await self._run():
+                        # Keep browser open
+                        while True:
+                            await asyncio.sleep(1)
+
                     await self.siak.unauthenticate()
                 except Exception as e:
                     logger.error(f"An error occurred: {e}")
@@ -65,6 +69,4 @@ class WarBot:
 
         logger.success("WarBot completed successfully.")
         logger.info("Script finished. Press Ctrl+C to exit (including the browser).")
-        # Keep browser open
-        while True:
-            await asyncio.sleep(1)
+        return True
