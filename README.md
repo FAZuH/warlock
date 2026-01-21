@@ -21,8 +21,8 @@ https://github.com/user-attachments/assets/e1f077d2-494c-43de-b5be-4a1bfbb87a3d
 ## Features
 
 - Automatic authentication to university portal
-- Handle CAPTCHA challenges via CLI or interactive Discord bot
-- Send notifications via Discord webhook
+- Handle CAPTCHA challenges via interactive Discord bot
+- Send CAPTCHA notifications via Discord webhook when Discord bot is not set
 
 **Modules**:
 - **war**: Bot to search and enroll for courses by course and professor names.
@@ -41,6 +41,9 @@ In root of the repository,
 5. Copy `.env-example` file to `.env` and fill in the required environment variables. Each variable is documented in the `.env-example` file.
 
 ## Usage
+
+> [!TIP]
+> Press Ctrl + C to stop the program while it's running.
 
 ### War bot
 
