@@ -15,7 +15,7 @@ class IrsService:
     def __init__(self, siak: Siak) -> None:
         self.siak = siak
 
-    async def fill_irs(self, courses: list[CourseTarget]) -> bool:
+    async def fill_irs(self, courses: list[CourseTarget], false_on_notfound: bool = False) -> bool:
         """Navigates to the Course Plan Edit page and fills the IRS form.
 
         Iterates through the available courses on the page and selects those
@@ -23,10 +23,11 @@ class IrsService:
 
         Args:
             courses: List of CourseTarget objects to select.
+            false_on_notfound: Returns False when there are courses not found in IRS page.
 
         Returns:
             bool: True if navigation and selection process completed (even if some courses weren't found),
-                  False if navigation failed or registration is closed.
+                  False if navigation failed, registration is closed, or a course is not found when false_on_notfound is true.
         """
         await self.siak.page.goto(Path.COURSE_PLAN_EDIT, wait_until="domcontentloaded")
 
@@ -81,6 +82,8 @@ class IrsService:
         logger.info("Finished selecting courses")
         for target in pending_courses:
             logger.error(f"Course not found: {target}")
+            if false_on_notfound:
+                return False
 
         return True
 

@@ -62,7 +62,7 @@ class WarBot:
         Returns:
             bool: False if filling failed (e.g. registration closed), True otherwise.
         """
-        if await self.irs_service.fill_irs(self.courses) is False:
+        if await self.irs_service.fill_irs(self.courses, self.conf.warbot_notfound_retry) is False:
             return False
 
         await self.irs_service.submit_irs(self.conf.warbot_autosubmit)

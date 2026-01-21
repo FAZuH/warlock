@@ -45,7 +45,7 @@ class Config:
         self.discord_channel_id = os.getenv("DISCORD_CHANNEL_ID")
         if self.discord_channel_id:
             self.discord_channel_id = int(self.discord_channel_id)
-        self.headless = os.getenv("HEADLESS", "true").lower() in ("true", "1", "yes")
+        self.headless = self._is_truthy(os.getenv("HEADLESS", "true"))
         self.browser = os.getenv("BROWSER", "chromium").lower()
 
         # SiakNG credentials
@@ -59,11 +59,8 @@ class Config:
 
         # War bot
         self.warbot_interval = int(os.getenv("WARBOT_INTERVAL", 5))
-        self.warbot_autosubmit = os.getenv("WARBOT_AUTOSUBMIT", "true").lower() in (
-            "true",
-            "1",
-            "yes",
-        )
+        self.warbot_autosubmit = self._is_truthy(os.getenv("WARBOT_AUTOSUBMIT", "true"))
+        self.warbot_notfound_retry = self._is_truthy(os.getenv("WARBOT_NOTFOUND_RETRY", "true"))
 
     def __new__(cls, *args, **kwargs):
         if cls._instance is None:
@@ -79,3 +76,10 @@ class Config:
             return resp.status_code == 200
         except requests.RequestException:
             return False
+
+    def _is_truthy(self, bool_value: str) -> bool:
+        return bool_value.lower() in (
+            "true",
+            "1",
+            "yes",
+        )
