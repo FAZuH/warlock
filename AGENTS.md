@@ -16,11 +16,16 @@ This project uses **[uv](https://docs.astral.sh/uv/)** for dependency management
 - **Direct Script:** `uv run python -m fazuh.warlock <command>`
 
 ### Testing
-*Note: The `tests/` directory is configured in `pyproject.toml` but may not exist yet. Create it if adding tests.*
+*Note: The `tests/` directory is configured in `pyproject.toml`.*
 
 - **Run All Tests:** `uv run pytest`
 - **Run Single Test:** `uv run pytest tests/path/to/test_file.py::test_function_name`
 - **Run with Output:** `uv run pytest -s`
+
+**Test Categories:**
+- **Manual Tests (`tests/manual`):** These tests require manual interaction or specific data files. Run with `--run-manual`.
+  - Example: `uv run pytest tests/manual/test_warbot_manual.py --run-manual --schedule-html "path/to/schedule.html"`
+- **Webhook Tests (`tests/webhook`):** Tests for Discord webhook integration.
 
 ### Linting & Formatting
 Strict adherence to `ruff` and `isort` configurations in `pyproject.toml` is required.

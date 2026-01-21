@@ -44,31 +44,38 @@ In root of the repository,
 
 ### War bot
 
-Create a `courses.yaml` (recommended) or `courses.json` file to configure your target courses.
+Create a `courses.yaml` file to configure your target courses. For example:
 
-**Recommended Format (`courses.yaml`):**
 ```yaml
-# Select by Course only (chooses the first match)
+# You can use course, prof, time, and code to select courses.
+
+# 1. Select by Course only (picks the first available class for this course)
 - course: Database
 
-# Select by Course and Professor
+# 2. Select by Course and Professor
 - course: Analisis Mult
   prof: Titin
 
-# Select by Class Code (unique ID in radio button value)
-- code: "782396"
-
-# Select by Course and Time
+# 3. Select by Course and Time
 - course: Agama Buddha
   time: Jumat
 
-# You can add names for your own reference
+# 4. Select by Course, Professor, AND Time
+- course: Analisis 1
+  prof: Putri
+  time: Senin, 08.00-09.40
+
+# 5. Select by unique Class Code (skips course/prof/time matching)
+- code: "782396"
+
+# 6. You can add names for your own reference
 - name: "My Favorite Elective"
   code: "785627"
 ```
 
 > [!tip]
-> You can use `--test` to verify your `courses.yaml` config. Read further instructions at [Testing](#testing) section
+> Read [Testing](#testing) section for testing your `courses.yaml` configuration
+
 
 You can run using `uv run warlock war`.
 
@@ -109,14 +116,30 @@ When a CAPTCHA appears, the bot will post the image to the channel. **Reply** to
 
 You can verify your `courses.yaml` configuration against a saved schedule HTML file without connecting to the actual server. This allows you to check if your target courses match the available classes correctly.
 
-**Arguments:**
-- `--test`: Enables test mode (skips authentication, mocks responses).
-- `--jadwal-html <path>`: Path to the saved "Jadwal Kelas Mata Kuliah" HTML file.
+We use `pytest` for manual and integration testing.
 
-**Example:**
+**Arguments:**
+- `--run-manual`: Required to run manual tests (WarBot, AutoFill).
+- `--run-webhook`: Required to run Discord webhook integration tests (Tracker).
+- `--schedule-html=<path>`: Path to the saved "Jadwal Kelas Mata Kuliah" HTML file.
+
+> [!NOTE]
+> Get schedule html file by navigating to https://academic.ui.ac.id/main/Schedule/Index and saving the page with Ctrl + S
+
+**Examples:**
+
+*Manual Bot Testing:*
 ```bash
-uv run warlock war --test --jadwal-html "data/Jadwal Kelas Mata Kuliah - SIAK NG.html"
+uv run pytest tests/manual/test_warbot_manual.py --run-manual --schedule-html=<path>
 ```
+
+*Webhook Integration Testing:*
+```bash
+uv run pytest tests/webhook/test_tracker_webhook.py --run-webhook
+```
+
+> [!WARNING]
+> `--schedule-html` will cause an error if you don't include the equal between the arg name and value
 
 This will run the bot in test mode, generate a mock IRS page populated with courses from the provided HTML, and attempt to select the courses defined in your `courses.yaml`. Check the logs to see which courses were selected.
 
