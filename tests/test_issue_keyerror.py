@@ -4,10 +4,10 @@ from fazuh.warlock.module.schedule_update_tracker import ScheduleUpdateTracker
 
 
 @pytest.mark.asyncio
-async def test_webhook_large_payload_keyerror_fix():
+async def test_webhook_large_payload_chunking():
     """
-    Test that _send_changes_to_webhook correctly handles > 10 changes
-    without raising KeyError: 'content' when falling back to file upload.
+    Test that _send_changes_to_webhook correctly chunks > 10 changes
+    and creates a thread.
     """
     # Mock dependencies
     with (
@@ -29,7 +29,7 @@ async def test_webhook_large_payload_keyerror_fix():
 
         tracker = ScheduleUpdateTracker()
 
-        # Create > 10 changes to trigger the file upload logic
+        # Create 15 changes to trigger chunking (10 + 5)
         changes = []
         for i in range(15):
             changes.append(
@@ -40,15 +40,26 @@ async def test_webhook_large_payload_keyerror_fix():
                 }
             )
 
-        # We need to mock requests.post to avoid actual network call
+        # Mock requests.post
         with patch("requests.post") as mock_post:
-            mock_post.return_value.raise_for_status = MagicMock()
+            # Setup response for the first call (thread creation)
+            mock_response = MagicMock()
+            mock_response.json.return_value = {"id": "123456789"}
+            mock_response.raise_for_status.return_value = None
+            mock_post.return_value = mock_response
 
-            # This should NOT raise KeyError
-            try:
-                await tracker._send_changes_to_webhook("http://fake.url", changes)
-            except KeyError as e:
-                pytest.fail(f"Raised KeyError: {e}")
+            await tracker._send_changes_to_webhook("http://fake.url", changes)
 
-            # Verify that it called post (we don't strictly care about arguments, just that it didn't crash)
-            assert mock_post.called
+            # Verify calls
+            assert mock_post.call_count == 2
+
+            # First call: Create thread
+            args1, kwargs1 = mock_post.call_args_list[0]
+            assert kwargs1["params"] == {"wait": "true"}
+            assert "thread_name" in kwargs1["json"]
+            assert len(kwargs1["json"]["embeds"]) == 10
+
+            # Second call: Post to thread
+            args2, kwargs2 = mock_post.call_args_list[1]
+            assert kwargs2["params"] == {"thread_id": "123456789"}
+            assert len(kwargs2["json"]["embeds"]) == 5

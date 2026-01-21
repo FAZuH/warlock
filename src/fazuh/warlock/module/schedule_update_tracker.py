@@ -1,14 +1,14 @@
 import asyncio
 from datetime import datetime
-import io
 from pathlib import Path
 from time import time
 from typing import Any
 
+import aiohttp
 from bs4 import BeautifulSoup
 from bs4 import Tag
+import discord
 from loguru import logger
-import requests
 
 from fazuh.warlock.config import Config
 from fazuh.warlock.siak.siak import Siak
@@ -24,6 +24,7 @@ class ScheduleUpdateTracker:
 
     def __init__(self):
         self.conf = Config()
+        self.conf.load()
 
         data_folder = Path("data")
         if not data_folder.exists():
@@ -42,10 +43,6 @@ class ScheduleUpdateTracker:
 
         Continuously monitors the schedule at the configured interval.
         """
-        if self.conf.is_test:
-            await self._run_test()
-            return
-
         try:
             await self.siak.start()
 
@@ -318,11 +315,6 @@ class ScheduleUpdateTracker:
         period_code = self._extract_period_from_url(self.conf.tracked_url)
         period_display = self._format_period(period_code)
 
-        base_data: dict[str, Any] = {
-            "username": "Warlock Tracker",
-            "avatar_url": "https://academic.ui.ac.id/favicon.ico",
-        }
-
         embeds = []
         for change in changes:
             if change["type"] == "new":
@@ -335,70 +327,49 @@ class ScheduleUpdateTracker:
                 color = 0xFEE75C  # Yellow
                 title = f"[EDITED] ﻿ ﻿ ﻿ {change['title']}"
 
-            embed = {"title": title, "color": color, "fields": change["fields"]}
+            embed = discord.Embed(title=title, color=color)
+            for field in change["fields"]:
+                embed.add_field(name=field["name"], value=field["value"], inline=field["inline"])
             embeds.append(embed)
 
-        data = base_data.copy()
-        data["content"] = (
-            f"## Jadwal SIAK UI Berubah ({period_display})\n﻿\nBetween <t:{int(time() - self.conf.tracker_interval)}:R> to <t:{int(time())}:R>"
+        content = (
+            f"## Jadwal SIAK UI Berubah ({period_display})\n\n"
+            f"Between <t:{int(time() - self.conf.tracker_interval)}:R> to <t:{int(time())}:R>"
         )
 
-        # Discord allows max 10 embeds per webhook
-        if len(embeds) > 10:
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            filename = f"siak_schedule_diff_{timestamp}.txt"
+        # Chunk embeds (Discord allows max 10 embeds per webhook)
+        chunks = [embeds[i : i + 10] for i in range(0, len(embeds), 10)]
 
-            text_content = []
-            for change in changes:
-                if change["type"] == "new":
-                    text_content.append(f"NEW: {change['title']}")
-                elif change["type"] == "removed":
-                    text_content.append(f"REMOVED: {change['title']}")
-                else:
-                    text_content.append(f"EDITED: {change['title']}")
-
-                for field in change["fields"]:
-                    text_content.append(f"  {field['name']}: {field['value']}")
-                text_content.append("")
-
-            diff_file = io.BytesIO("\n".join(text_content).encode("utf-8"))
-
-            data["content"] += "﻿\n\n*(Terlalu banyak perubahan, lihat file)*"
-            files = {"file": (filename, diff_file, "text/plain")}
-
-            try:
-                resp = await asyncio.to_thread(requests.post, webhook_url, data=data, files=files)
-                resp.raise_for_status()
-                logger.info("Changes sent to webhook as file.")
-            except requests.exceptions.RequestException as e:
-                logger.error(f"Error sending to webhook: {e}")
-            finally:
-                diff_file.close()
+        if not chunks:
+            logger.warning("No embeds to send.")
             return
 
-        data["embeds"] = embeds
+        async with aiohttp.ClientSession() as session:
+            webhook = discord.Webhook.from_url(webhook_url, session=session)
 
-        # Add link button to SIAK
-        data["components"] = [
-            {
-                "type": 1,  # Action Row
-                "components": [
-                    {
-                        "type": 2,  # Button
-                        "style": 5,  # Link
-                        "label": "Buka SIAK",
-                        "url": self.conf.tracked_url,
+            try:
+                for i, chunk in enumerate(chunks):
+                    kwargs = {
+                        "embeds": chunk,
+                        "username": "Warlock Tracker",
+                        "avatar_url": "https://academic.ui.ac.id/favicon.ico",
+                        "wait": True,
                     }
-                ],
-            }
-        ]
 
-        try:
-            resp = await asyncio.to_thread(requests.post, webhook_url, json=data)
-            resp.raise_for_status()
-            logger.info("Changes sent to webhook successfully.")
-        except requests.exceptions.RequestException as e:
-            logger.error(f"Error sending to webhook: {e}")
+                    # Only include content (header) in the first message
+                    if i == 0:
+                        kwargs["content"] = content
+
+                    logger.debug(f"Sending chunk {i + 1}/{len(chunks)} with {len(chunk)} embeds.")
+                    await webhook.send(**kwargs)
+                    logger.info(f"Sent chunk {i + 1}/{len(chunks)} to webhook.")
+
+                logger.info("Changes sent to webhook successfully.")
+
+            except discord.HTTPException as e:
+                logger.error(f"Error sending to webhook: {e}")
+            except Exception as e:
+                logger.error(f"An unexpected error occurred: {e}")
 
     def _extract_period_from_url(self, url: str) -> str:
         """Extract period code from URL. Returns '2025-2' from '...?period=2025-2'"""
@@ -416,49 +387,3 @@ class ScheduleUpdateTracker:
         next_year = str(int(year) + 1)
 
         return f"Semester {semester_name} {year}/{next_year}"
-
-    async def _run_test(self):
-        """Simulate changes for all course modification cases and output to terminal."""
-        logger.info("Test mode enabled. Simulating schedule updates...")
-
-        # Mock Data
-        # 1. New Course: "CS101 - Intro to CS"
-        # 2. Removed Course: "OLD999 - Deprecated Course"
-        # 3. Modified Course (Class Added): "MATH202 - Linear Algebra"
-        # 4. Modified Course (Class Removed): "PHYS101 - Physics I"
-
-        # Helper to create class string matching the format:
-        # "Kelas Teori Matriks (A); Indonesia; 25/08/2025 - 19/12/2025; Rabu, 08.00-09.40; D.109; - Dra. ..."
-        def mk_cls(name, time, room):
-            return f"Kelas {name}; Indonesia; 25/08/2025 - 19/12/2025; {time}; {room}; - Dosen"
-
-        old_courses_list = [
-            f"OLD999 - Deprecated Course: | {mk_cls('A', 'Mon 08.00', '101')}",
-            f"MATH202 - Linear Algebra: | {mk_cls('A', 'Tue 10.00', '202')}",
-            f"PHYS102 - Physics II: | {mk_cls('A', 'Wed 08.00', '303')}",
-            f"UNCHANGED01 - Static Course: | {mk_cls('A', 'Fri 13.00', '404')}",
-            "SCMA601006 -Aljabar Linier 1(3 SKS, Term 2); Kurikulum 01.01.03.01-2024: | KelasAlin 1 (A); Indonesia; 02/02/2026 - 05/06/202602/02/2026 - 05/06/2026; Senin, 13.00-14.40Kamis, 08.00-09.40; Lab. Multidisiplin 303Lab. Multidisiplin 303; - Dr. Hengki Tasman, S.Si., M.Si. | KelasAlin 1 (B); Indonesia; 02/02/2026 - 05/06/202602/02/2026 - 05/06/2026; Senin, 13.00-14.40Jumat, 08.00-09.40; Planet Earth; - Dr. Dipo Aldila, S.Si., M.Si. | KelasAlin 1 (D); Indonesia; 02/02/2026 - 05/06/202602/02/2026 - 05/06/2026; Senin, 13.00-14.40Kamis, 08.00-09.40; B.401B.401; - Dr. Denny Riama Silaban, M.Kom. | KelasAlin 1 (E); Indonesia; 02/02/2026 - 05/06/202602/02/2026 - 05/06/2026; Senin, 13.00-14.40Kamis, 08.00-09.40; B.303B.303; - Dra. Siti Aminah, S.Si., M.Kom. | KelasAlin 1 (F); Indonesia; 02/02/2026 - 05/06/202602/02/2026 - 05/06/2026; Senin, 13.00-14.40Kamis, 08.00-09.40; D.403D.403; - Dr. Debi Oktia Haryeni, S.Si., M.Si.-  Satoru Gojo, Ph.D.",
-        ]
-
-        new_courses_list = [
-            f"CS101 - Intro to CS: | {mk_cls('A', 'Mon 10.00', 'LAB1')}",  # New
-            f"MATH202 - Linear Algebra: | {mk_cls('A', 'Tue 10.00', '202')} | {mk_cls('B', 'Thu 10.00', '202')}",  # Class B added
-            f"PHYS101 - Physics I: | {mk_cls('A', 'Wed 08.00', '303')}",  # Class B removed
-            f"PHYS102 - Physics II: | {mk_cls('A', 'Wed 08.00', '303')} | {mk_cls('B', 'Wed 10.00', '303')} | {mk_cls('C', 'Wed 10.00', '303')}",  # Class B, C added
-            f"UNCHANGED01 - Static Course: | {mk_cls('A', 'Fri 13.00', '404')}",
-            "SCMA601006 -Aljabar Linier 1(3 SKS, Term 2); Kurikulum 01.01.03.01-2024: | KelasAlin 1 (B); Indonesia; 02/02/2026 - 05/06/202602/02/2026 - 05/06/2026; Senin, 13.00-14.40Kamis, 08.00-09.40; B.402B.402; - Dr. Dipo Aldila, S.Si., M.Si. | KelasAlin 1 (C); Indonesia; 02/02/2026 - 05/06/202602/02/2026 - 05/06/2026; Senin, 13.00-14.40Kamis, 08.00-09.40; B.405B.405; - Dr. Helen Burhan, S.Si., M.Si. | KelasAlin 1 (E); Indonesia; 02/02/2026 - 05/06/202602/02/2026 - 05/06/2026; Senin, 13.00-14.40Kamis, 08.00-09.40; B.303B.303; - Dra. Siti Aminah, S.Si., M.Kom. | KelasAlin 1 (F); Indonesia; 02/02/2026 - 05/06/202602/02/2026 - 05/06/2026; Senin, 13.00-14.40Kamis, 08.00-09.40; D.403D.403; - Dr. Debi Oktia Haryeni, S.Si., M.Si.-  Herolistra Baskoroputro, Ph.D.",
-        ]
-
-        old_content = "\n".join(old_courses_list)
-        new_content = "\n".join(new_courses_list)
-
-        old_courses = self._parse_courses_dict(old_content)
-        new_courses = self._parse_courses_dict(new_content)
-
-        changes = self._generate_detailed_diff(old_courses, new_courses)
-
-        if changes:
-            logger.info(f"Simulation finished. Sending {len(changes)} changes to webhook...")
-            await self._send_changes_to_webhook(self.conf.tracker_discord_webhook_url, changes)
-        else:
-            logger.warning("No changes detected (unexpected for this test).")
