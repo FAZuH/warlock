@@ -16,7 +16,6 @@ async def test_webhook_large_payload_chunking():
     # Mock dependencies
     with (
         patch("fazuh.warlock.module.schedule_update_tracker.Config") as MockConfig,
-        patch("fazuh.warlock.module.schedule_update_tracker.Siak") as MockSiak,
         patch("fazuh.warlock.module.schedule_update_tracker.Path") as MockPath,
     ):
         # Setup mocks

@@ -8,7 +8,6 @@ from tests.libs.test_manager import MockManager
 @pytest.mark.asyncio
 async def test_autofill_manual(schedule_html):
     autofill = AutoFill()
-    autofill.conf.is_test = False
 
     await autofill.siak.start()
 

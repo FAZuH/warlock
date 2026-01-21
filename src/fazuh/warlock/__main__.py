@@ -28,6 +28,9 @@ async def main():
 
     logger.add("log/{time}.log", rotation="1 day")
 
+    # singleton init
+    Config().load()
+
     from fazuh.warlock.bot import init_discord_bot
 
     # NOTE: Early async bot initialization. on_ready state will be awaited when needed.

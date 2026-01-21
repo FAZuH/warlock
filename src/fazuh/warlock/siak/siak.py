@@ -50,11 +50,6 @@ class Siak:
         self.browser = await browser.launch(**launch_kwargs)
         self.page = await self.browser.new_page()
 
-        if self.config.is_test:
-            from fazuh.warlock.test_manager import TestManager
-
-            await TestManager(self.config).setup_mocks(self.page)
-
     async def close(self):
         """Closes the browser and stops the Playwright instance.
 
@@ -98,10 +93,6 @@ class Siak:
         Returns:
             bool: True if authentication is successful, False otherwise.
         """
-        if self.config.is_test:
-            logger.info("Test mode enabled. Skipping authentication.")
-            return True
-
         if retries > self.auth_max_retries:
             logger.error("Maximum authentication retries reached.")
             return False
