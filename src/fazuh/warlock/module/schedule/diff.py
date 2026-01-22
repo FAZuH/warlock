@@ -128,10 +128,10 @@ def generate_diff(
             # Similar theorem also holds for `ruang_suppress`
 
             if dosen_suppress:
-                logger.info("Suppressed professor change (no time/location change)")
+                logger.info("Suppressed professor change")
                 continue
             if ruang_suppress:
-                logger.info("Suppressed location change (no time/professor change)")
+                logger.info("Suppressed location change")
                 continue
 
             modified_names.add(name)
