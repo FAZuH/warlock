@@ -254,9 +254,17 @@ class ScheduleUpdateTracker:
                 ruang_changed = old_info["ruang"] != new_info["ruang"]
                 dosen_changed = old_info["dosen"] != new_info["dosen"]
 
-                if self.conf.tracker_suppress_professor_change and dosen_changed and not (waktu_changed or ruang_changed):
+                if (
+                    self.conf.tracker_suppress_professor_change
+                    and dosen_changed
+                    and not (waktu_changed or ruang_changed)
+                ):
                     continue
-                if self.conf.tracker_suppress_location_change and ruang_changed and not (waktu_changed or dosen_changed):
+                if (
+                    self.conf.tracker_suppress_location_change
+                    and ruang_changed
+                    and not (waktu_changed or dosen_changed)
+                ):
                     continue
 
                 modified_names.add(name)

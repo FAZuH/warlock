@@ -1,8 +1,13 @@
 import asyncio
-import pytest
-from unittest.mock import MagicMock, AsyncMock, patch, PropertyMock
-from fazuh.warlock.bot import CaptchaBot
+from unittest.mock import AsyncMock
+from unittest.mock import MagicMock
+from unittest.mock import patch
+from unittest.mock import PropertyMock
+
 import discord
+import pytest
+
+from fazuh.warlock.bot import CaptchaBot
 
 
 @pytest.mark.asyncio
