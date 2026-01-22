@@ -129,12 +129,12 @@ def generate_diff(
 
             if dosen_suppress:
                 logger.info(
-                    f"Suppressed professor change {old_info['dosen']} -> {new_info['dosen']}"
+                    f"Suppressed professor change at {name}: {old_info['dosen']} -> {new_info['dosen']}"
                 )
                 continue
             if ruang_suppress:
                 logger.info(
-                    f"Suppressed location change {old_info['ruang']} -> {new_info['ruang']}"
+                    f"Suppressed location change at {name}: {old_info['ruang']} -> {new_info['ruang']}"
                 )
                 continue
 
