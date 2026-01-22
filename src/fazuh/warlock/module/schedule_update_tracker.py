@@ -259,12 +259,14 @@ class ScheduleUpdateTracker:
                     and dosen_changed
                     and not (waktu_changed or ruang_changed)
                 ):
+                    logger.info("Suppressed professor change (no time/location change)")
                     continue
                 if (
                     self.conf.tracker_suppress_location_change
                     and ruang_changed
                     and not (waktu_changed or dosen_changed)
                 ):
+                    logger.info("Suppressed location change (no time/professor change)")
                     continue
 
                 modified_names.add(name)
