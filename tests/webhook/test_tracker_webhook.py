@@ -1,6 +1,9 @@
 from loguru import logger
 import pytest
 
+from fazuh.warlock.module.schedule.diff import generate_diff
+from fazuh.warlock.module.schedule.notifier import send_notifications
+from fazuh.warlock.module.schedule.parser import parse_schedule_string
 from fazuh.warlock.module.schedule_update_tracker import ScheduleUpdateTracker
 
 
@@ -42,14 +45,19 @@ async def test_tracker_simulation():
     old_content = "\n".join(old_courses_list)
     new_content = "\n".join(new_courses_list)
 
-    old_courses = tracker._parse_courses_dict(old_content)
-    new_courses = tracker._parse_courses_dict(new_content)
+    old_courses = parse_schedule_string(old_content)
+    new_courses = parse_schedule_string(new_content)
 
-    changes = tracker._generate_detailed_diff(old_courses, new_courses)
+    changes = generate_diff(old_courses, new_courses)
 
     if changes:
         logger.info(f"Simulation finished. Sending {len(changes)} changes to webhook...")
-        await tracker._send_changes_to_webhook(tracker.conf.tracker_discord_webhook_url, changes)
+        await send_notifications(
+            tracker.conf.tracker_discord_webhook_url,
+            changes,
+            tracker.conf.tracked_url,
+            tracker.conf.tracker_interval,
+        )
     else:
         logger.warning("No changes detected (unexpected for this test).")
         assert False, "No changes detected (unexpected for this test)."
