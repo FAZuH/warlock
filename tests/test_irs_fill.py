@@ -61,7 +61,7 @@ async def test_fill_irs_integration(mock_siak, irs_html):
     service = IrsService(mock_siak)
 
     targets = [
-        CourseTarget(course="Analisis 1", prof="Putri"),
+        CourseTarget(course="Analisis 1", prof="Fake Prof"),
         CourseTarget(code="782396"),
         CourseTarget(course="AnDat Kategorik", time="Senin, 10.00-12.30"),
     ]

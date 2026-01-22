@@ -254,21 +254,33 @@ class ScheduleUpdateTracker:
                 ruang_changed = old_info["ruang"] != new_info["ruang"]
                 dosen_changed = old_info["dosen"] != new_info["dosen"]
 
-                if (
+                dosen_suppress = (
                     self.conf.tracker_suppress_professor_change
                     and dosen_changed
                     and not (waktu_changed or ruang_changed)
-                ):
-                    logger.info("Suppressed professor change (no time/location change)")
-                    continue
-                if (
+                )
+                ruang_suppress = (
                     self.conf.tracker_suppress_location_change
                     and ruang_changed
                     and not (waktu_changed or dosen_changed)
-                ):
+                )
+
+                # NOTE:
+                # `dosen_suppress = True` IF AND ONLY IF all three conditions hold:
+                # 1. `tracker_suppress_professor_change = True`
+                # 2. `dosen_changed = True`
+                # 3. `waktu_changed = False AND ruang_changed = False`
+                #
+                # Similar theorem also applies for `ruang_suppress`
+
+                if dosen_suppress:
+                    logger.info("Suppressed professor change (no time/location change)")
+                    continue
+                if ruang_suppress:
                     logger.info("Suppressed location change (no time/professor change)")
                     continue
 
+                # Both dosen_suppress and ruang_suppress is False <=> waktu_changed is True
                 modified_names.add(name)
 
             if not added_names and not removed_names and not modified_names:
