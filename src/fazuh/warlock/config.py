@@ -56,6 +56,12 @@ class Config:
         self.tracker_interval = int(os.getenv("TRACKER_INTERVAL", 1200))
         self.tracked_url = tracked_url
         self.tracker_discord_webhook_url = tracker_webhook
+        self.tracker_suppress_professor_change = self._is_truthy(
+            os.getenv("TRACKER_SUPPRESS_PROFESSOR_CHANGE", "false")
+        )
+        self.tracker_suppress_location_change = self._is_truthy(
+            os.getenv("TRACKER_SUPPRESS_LOCATION_CHANGE", "false")
+        )
 
         # War bot
         self.warbot_interval = int(os.getenv("WARBOT_INTERVAL", 5))

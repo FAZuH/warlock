@@ -244,8 +244,22 @@ class ScheduleUpdateTracker:
             # Check for modifications within common classes
             modified_names = set()
             for name in common_names:
-                if old_classes_dict[name] != new_classes_dict[name]:
-                    modified_names.add(name)
+                old_info = old_classes_dict[name]
+                new_info = new_classes_dict[name]
+
+                if old_info == new_info:
+                    continue
+
+                waktu_changed = old_info["waktu"] != new_info["waktu"]
+                ruang_changed = old_info["ruang"] != new_info["ruang"]
+                dosen_changed = old_info["dosen"] != new_info["dosen"]
+
+                if self.conf.tracker_suppress_professor_change and dosen_changed and not (waktu_changed or ruang_changed):
+                    continue
+                if self.conf.tracker_suppress_location_change and ruang_changed and not (waktu_changed or dosen_changed):
+                    continue
+
+                modified_names.add(name)
 
             if not added_names and not removed_names and not modified_names:
                 continue
