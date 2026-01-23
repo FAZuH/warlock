@@ -4,14 +4,14 @@ import pytest
 from fazuh.warlock.module.schedule.diff import generate_diff
 from fazuh.warlock.module.schedule.notifier import send_notifications
 from fazuh.warlock.module.schedule.parser import parse_schedule_string
-from fazuh.warlock.module.schedule_update_tracker import ScheduleUpdateTracker
+from fazuh.warlock.module.track import Track
 
 
 @pytest.mark.webhook
 @pytest.mark.asyncio
 async def test_tracker_chunking_simulation():
     """Simulate massive changes to trigger chunking logic (more than 10 embeds)."""
-    tracker = ScheduleUpdateTracker()
+    tracker = Track()
     logger.info("Test mode enabled. Simulating massive schedule updates...")
 
     # Helper to create class string

@@ -14,7 +14,7 @@ from fazuh.warlock.module.schedule.parser import serialize_schedule
 from fazuh.warlock.siak.siak import Siak
 
 
-class ScheduleUpdateTracker:
+class Track:
     """Monitors a specific SIAK schedule page for changes.
 
     Periodically fetches the schedule page, compares it with the previous state,

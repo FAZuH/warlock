@@ -1,5 +1,3 @@
-import pytest
-
 from fazuh.warlock.module.schedule.diff import generate_diff
 
 

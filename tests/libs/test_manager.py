@@ -40,7 +40,7 @@ class MockManager:
         if self.schedule_html_path.exists():
             jadwal_content = self.schedule_html_path.read_text(encoding="utf-8", errors="ignore")
 
-            # Mock the tracked URL (for ScheduleUpdateTracker)
+            # Mock the tracked URL (for Track)
             if self.tracked_url:
                 await page.route(
                     self.tracked_url,

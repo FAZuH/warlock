@@ -1,5 +1,3 @@
-import pytest
-
 from fazuh.warlock.module.schedule.parser import parse_schedule_html
 from fazuh.warlock.module.schedule.parser import parse_schedule_string
 from fazuh.warlock.module.schedule.parser import serialize_schedule

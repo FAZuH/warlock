@@ -38,9 +38,9 @@ async def main():
 
     try:
         if args.module == "track":
-            from fazuh.warlock.module.schedule_update_tracker import ScheduleUpdateTracker
+            from fazuh.warlock.module.track import Track
 
-            await ScheduleUpdateTracker().start()
+            await Track().start()
 
         elif args.module == "war":
             from fazuh.warlock.module.war_bot import WarBot

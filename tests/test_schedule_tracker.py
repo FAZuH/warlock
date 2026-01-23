@@ -7,7 +7,7 @@ import pytest
 import pytest_asyncio
 
 from fazuh.warlock.module.schedule.cache import ScheduleCache
-from fazuh.warlock.module.schedule_update_tracker import ScheduleUpdateTracker
+from fazuh.warlock.module.track import Track
 from fazuh.warlock.siak.siak import Siak
 
 
@@ -35,7 +35,7 @@ async def test_schedule_tracker_run(mock_siak, schedule_html, tmp_path):
     mock_siak.page.content = AsyncMock(return_value=schedule_html)
 
     # Mock Config to avoid loading real .env
-    with patch("fazuh.warlock.module.schedule_update_tracker.Config") as mock_config_cls:
+    with patch("fazuh.warlock.module.track.Config") as mock_config_cls:
         mock_conf = mock_config_cls.return_value
         mock_conf.tracked_url = "https://academic.ui.ac.id/main/CoursePlan/CoursePlanView"
         mock_conf.tracker_discord_webhook_url = "http://mock-webhook"
@@ -50,15 +50,15 @@ async def test_schedule_tracker_run(mock_siak, schedule_html, tmp_path):
             return ScheduleCache(file_path=cache_file_path)
 
         with patch(
-            "fazuh.warlock.module.schedule_update_tracker.ScheduleCache",
+            "fazuh.warlock.module.track.ScheduleCache",
             side_effect=mock_cache_init,
         ):
             # Mock send_notifications
             with patch(
-                "fazuh.warlock.module.schedule_update_tracker.send_notifications",
+                "fazuh.warlock.module.track.send_notifications",
                 new_callable=AsyncMock,
             ) as mock_send:
-                tracker = ScheduleUpdateTracker()
+                tracker = Track()
                 tracker.siak = mock_siak
 
                 # First run - should save cache and NOT notify
@@ -76,7 +76,7 @@ async def test_schedule_tracker_run(mock_siak, schedule_html, tmp_path):
                 cache_file_path.write_text("\n".join(lines))
 
                 # Re-init tracker to load modified cache
-                tracker = ScheduleUpdateTracker()
+                tracker = Track()
                 tracker.siak = mock_siak
                 tracker.conf = mock_conf  # Ensure config is set
 
