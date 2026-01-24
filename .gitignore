@@ -171,3 +171,5 @@ logs
 /data
 /courses.json
 /courses.yaml
+/.ruff_cache/
+/log/
