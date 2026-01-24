@@ -1,22 +1,11 @@
-
-https://github.com/user-attachments/assets/31b86a47-ba8f-466b-8d71-48ab0384e73e
-
-https://github.com/user-attachments/assets/e1f077d2-494c-43de-b5be-4a1bfbb87a3d
+● [Features](#features) ﻿ ﻿ ﻿● [Installation](#installation) ﻿ ﻿ ● [Usage](#usage) ﻿ ﻿ ● [License](#license)
 
 > [!warning]
 > This script may not work as expected. Use at your own risk.
 
-## Table of Contents
+https://github.com/user-attachments/assets/31b86a47-ba8f-466b-8d71-48ab0384e73e
 
-- [Features](#features)
-- [Installation](#installation)
-- [Usage](#usage)
-  - [War bot](#war-bot)
-  - [Schedule update tracker](#schedule-update-tracker)
-  - [AutoFill](#autofill)
-  - [Discord Bot for CAPTCHA](#discord-bot-for-captcha)
-  - [Testing](#testing)
-- [License](#license)
+https://github.com/user-attachments/assets/e1f077d2-494c-43de-b5be-4a1bfbb87a3d
 
 ## Features
 
